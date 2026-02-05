@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-paper text-ink font-body;
+}
+
+.gradient-bg {
+  background: radial-gradient(circle at top left, #fef3d6 0%, transparent 45%),
+    radial-gradient(circle at top right, #dff8f4 0%, transparent 50%),
+    linear-gradient(180deg, #f6f1ea 0%, #efe6db 100%);
+}
+
+.glow {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04), 0 22px 60px rgba(0, 0, 0, 0.08);
+}

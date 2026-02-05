@@ -1,0 +1,47 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Node
+frontend/node_modules/
+frontend/.next/
+out/
+dist/
+
+# Frontend env
+frontend/.env.local
+frontend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Backend env
+backend/.env
+
+# DB / data
+*.sqlite
+*.db
+backend/data/chroma/
+backend/data/uploads/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Alembic
+backend/alembic/versions/*.pyc
+
+# Coverage
+.coverage
+htmlcov/

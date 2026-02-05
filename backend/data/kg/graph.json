@@ -1,0 +1,16 @@
+{
+  "concept_nodes": [
+    {
+      "id": "concept_system_design",
+      "type": "concept",
+      "name": "System Design"
+    },
+    {
+      "id": "concept_dsa",
+      "type": "concept",
+      "name": "Data Structures & Algorithms"
+    }
+  ],
+  "source_nodes": [],
+  "edges": []
+}
