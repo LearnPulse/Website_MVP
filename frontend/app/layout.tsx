@@ -5,7 +5,7 @@ const space = Space_Grotesk({ subsets: ["latin"], variable: "--font-display" });
 const interTight = Inter_Tight({ subsets: ["latin"], variable: "--font-body" });
 
 export const metadata = {
-  title: "LearnPulse Sprint 1",
+  title: "LearnPulse",
   description: "Minimal end-to-end learning system"
 };
 

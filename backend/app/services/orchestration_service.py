@@ -2,23 +2,16 @@ from typing import Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.retrieval_service import retrieve
-from app.services.llm_service import generate_learning_output
+from app.services.llm_service import generate_learning_output, decide_learning_format
 from app.services.kg_service import load_kg
 from app.services.memory_service import get_user_memory
 
 
-def decide_format(goal: str, requested_format: str) -> str:
-    if requested_format:
-        return requested_format
-    if "cheat" in goal.lower():
-        return "cheat_sheet"
-    if "summary" in goal.lower():
-        return "summary"
-    return "micro_learning"
-
-
 async def run_learning(session: AsyncSession, topic: str, goal: str, requested_format: str, user_id: str) -> Dict[str, Any]:
-    format_hint = decide_format(goal, requested_format)
+    if requested_format:
+        format_hint = requested_format
+    else:
+        format_hint = decide_learning_format(topic, goal)
     sources = retrieve(f"{topic}. Goal: {goal}")
     kg = load_kg()
     user_context = await get_user_memory(session, user_id)

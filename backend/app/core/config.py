@@ -1,6 +1,18 @@
 from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import List
+from pathlib import Path
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def _resolve_path(value: str) -> str:
+    path = Path(value)
+    if path.is_absolute():
+        return str(path)
+    return str(_repo_root() / path)
 
 
 class Settings(BaseSettings):
@@ -8,9 +20,9 @@ class Settings(BaseSettings):
     gemini_api_key: str = Field(default="")
     gemini_embed_model: str = Field(default="models/text-embedding-004")
     gemini_chat_model: str = Field(default="models/gemini-1.5-flash")
-    chroma_dir: str = Field(default="backend/data/chroma")
-    kg_path: str = Field(default="backend/data/kg/graph.json")
-    upload_dir: str = Field(default="backend/data/uploads")
+    chroma_dir: str = Field(default=str(_repo_root() / "backend/data/chroma"))
+    kg_path: str = Field(default=str(_repo_root() / "backend/data/kg/graph.json"))
+    upload_dir: str = Field(default=str(_repo_root() / "backend/data/uploads"))
     cors_origins: List[str] = Field(default=["*"])
 
     class Config:
@@ -19,3 +31,6 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+settings.chroma_dir = _resolve_path(settings.chroma_dir)
+settings.kg_path = _resolve_path(settings.kg_path)
+settings.upload_dir = _resolve_path(settings.upload_dir)

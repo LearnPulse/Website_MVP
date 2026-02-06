@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
+console.log("API base:", apiBase);
+
 export default function Home() {
   const [topic, setTopic] = useState("System Design");
   const [goal, setGoal] = useState("Learn caching strategies");
@@ -50,7 +52,7 @@ export default function Home() {
       <section className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-6">
           <header className="space-y-3">
-            <p className="text-sm uppercase tracking-[0.2em] text-ink/50">Sprint 1</p>
+            <p className="text-sm uppercase tracking-[0.2em] text-ink/50">For students by students</p>
             <h1 className="text-4xl font-display text-ink">
               LearnPulse Foundation
             </h1>

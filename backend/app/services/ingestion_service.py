@@ -2,6 +2,7 @@ from typing import List, Dict, Any
 from pathlib import Path
 import uuid
 
+from pypdf import PdfReader
 from app.services.embedding_service import embed_texts
 from app.services.chroma_service import ChromaStore
 from app.services import kg_service
@@ -22,11 +23,27 @@ def chunk_text(text: str, max_chars: int = 800, overlap: int = 100) -> List[str]
     return [c for c in chunks if c]
 
 
+def _read_document_text(file_path: str) -> str:
+    path = Path(file_path)
+    if path.suffix.lower() == ".pdf":
+        reader = PdfReader(str(path))
+        pages = [page.extract_text() or "" for page in reader.pages]
+        return "\n".join(pages)
+    return path.read_text(errors="ignore")
+
+
 def ingest_document(file_path: str, topic: str, uploader_id: str) -> Dict[str, Any]:
-    text = Path(file_path).read_text(errors="ignore")
+    text = _read_document_text(file_path)
     chunks = chunk_text(text)
+
+    kg = kg_service.load_kg()
+    source_node = kg_service.create_source_node(Path(file_path).name, uploader_id)
+    kg.setdefault("source_nodes", []).append(source_node)
+    kg_service.link_source_to_topic(kg, source_node["id"], topic)
+    kg_service.save_kg(kg)
+
     if not chunks:
-        return {"status": "empty"}
+        return {"status": "empty", "chunks": 0, "source_id": source_node["id"]}
 
     embeddings = embed_texts(chunks)
     store = ChromaStore()
@@ -36,11 +53,5 @@ def ingest_document(file_path: str, topic: str, uploader_id: str) -> Dict[str, A
     metadatas = [{"doc_id": doc_id, "chunk": i, "topic": topic} for i in range(len(chunks))]
 
     store.add(ids=ids, embeddings=embeddings, documents=chunks, metadatas=metadatas)
-
-    kg = kg_service.load_kg()
-    source_node = kg_service.create_source_node(Path(file_path).name, uploader_id)
-    kg.setdefault("source_nodes", []).append(source_node)
-    kg_service.link_source_to_topic(kg, source_node["id"], topic)
-    kg_service.save_kg(kg)
 
     return {"status": "ok", "doc_id": doc_id, "chunks": len(chunks), "source_id": source_node["id"]}
