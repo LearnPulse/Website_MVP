@@ -11,6 +11,52 @@
       "name": "Data Structures & Algorithms"
     }
   ],
-  "source_nodes": [],
-  "edges": []
+  "source_nodes": [
+    {
+      "id": "source_795b43757ec74f29862e1a30b2214f10",
+      "type": "source",
+      "doc_name": "test.txt",
+      "uploader_id": "demo-user"
+    },
+    {
+      "id": "source_fd1a889d369144d4a320a8332742d320",
+      "type": "source",
+      "doc_name": "test.txt",
+      "uploader_id": "demo-user"
+    },
+    {
+      "id": "source_370db1d8b16f42b5a1839933a440bd82",
+      "type": "source",
+      "doc_name": "Beta Writeup - CSE 491 - Project 1 .pdf",
+      "uploader_id": "demo-user"
+    },
+    {
+      "id": "source_3e6f041a898942849ec6854915d960d0",
+      "type": "source",
+      "doc_name": "Team-Contract.pdf",
+      "uploader_id": "demo-user"
+    }
+  ],
+  "edges": [
+    {
+      "from": "source_795b43757ec74f29862e1a30b2214f10",
+      "to": "System Design",
+      "type": "supports"
+    },
+    {
+      "from": "source_fd1a889d369144d4a320a8332742d320",
+      "to": "System Design",
+      "type": "supports"
+    },
+    {
+      "from": "source_370db1d8b16f42b5a1839933a440bd82",
+      "to": "System Design",
+      "type": "supports"
+    },
+    {
+      "from": "source_3e6f041a898942849ec6854915d960d0",
+      "to": "System Design",
+      "type": "supports"
+    }
+  ]
 }
