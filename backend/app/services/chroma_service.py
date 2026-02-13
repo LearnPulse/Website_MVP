@@ -12,4 +12,8 @@ class ChromaStore:
         self.collection.add(ids=ids, embeddings=embeddings, documents=documents, metadatas=metadatas)
 
     def query(self, embedding: List[float], top_k: int = 4) -> Dict[str, Any]:
-        return self.collection.query(query_embeddings=[embedding], n_results=top_k)
+        return self.collection.query(
+            query_embeddings=[embedding],
+            n_results=top_k,
+            include=["documents", "metadatas", "distances"]
+        )

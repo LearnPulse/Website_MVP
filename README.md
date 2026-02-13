@@ -7,6 +7,10 @@ Monorepo for LearnPulse Sprint 1: FastAPI backend + Next.js frontend.
 - `frontend/` Next.js App Router + shadcn-style UI
 - `docs/` architecture and specs
 
+### Backend Packages
+- `backend/app/agents/` Orchestration + output agents
+- `backend/app/services/` Infrastructure services (Chroma, embeddings, KG, memory)
+
 ## A–Z Local Setup
 
 ### 1) Install System Prereqs

@@ -120,6 +120,11 @@ LLM Output
 -> Commit to Knowledge Graph
 ```
 
+## Implementation Notes (Sprint 1)
+
+- Orchestration + output logic live in `backend/app/agents/`
+- Infrastructure (Chroma, embeddings, KG, memory) live in `backend/app/services/`
+
 ## Key Architectural Principle
 
 The LLM is never called in isolation. Every generation is grounded in:
