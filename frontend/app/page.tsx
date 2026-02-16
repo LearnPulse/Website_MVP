@@ -1,115 +1,141 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import Link from "next/link";
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
-
-console.log("API base:", apiBase);
-
-export default function Home() {
-  const [topic, setTopic] = useState("System Design");
-  const [goal, setGoal] = useState("Learn caching strategies");
-  const [userId, setUserId] = useState("demo-user");
-  const [file, setFile] = useState<File | null>(null);
-  const [status, setStatus] = useState<string>("");
-  const [output, setOutput] = useState<string>("");
-
-  const handleIngest = async () => {
-    if (!file) {
-      setStatus("Please select a document to upload.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("topic", topic);
-    formData.append("user_id", userId);
-
-    setStatus("Uploading and ingesting...");
-    const res = await fetch(`${apiBase}/ingest`, { method: "POST", body: formData });
-    const data = await res.json();
-    setStatus(`Ingested: ${data.status} (chunks: ${data.chunks || 0})`);
-  };
-
-  const handleLearn = async () => {
-    setStatus("Generating learning output...");
-    const res = await fetch(`${apiBase}/learn`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic, goal, user_id: userId, format: "cheat_sheet" })
-    });
-    const data = await res.json();
-    setOutput(data.output || "");
-    setStatus("Done.");
-  };
-
+export default function Dashboard() {
   return (
-    <main className="mx-auto max-w-6xl px-6 py-12">
-      <section className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="space-y-6">
-          <header className="space-y-3">
-            <p className="text-sm uppercase tracking-[0.2em] text-ink/50">For students by students</p>
-            <h1 className="text-4xl font-display text-ink">
-              LearnPulse Foundation
+    <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+      
+      {/* Top Navigation */}
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="size-9 rounded-full bg-primary/10 flex items-center justify-center">
+              <span className="material-symbols-outlined text-primary text-[22px]">
+                auto_stories
+              </span>
+            </div>
+            <h1 className="text-lg font-bold tracking-tight">
+              LearnPulse
             </h1>
-            <p className="text-lg text-ink/70">
-              Upload learning sources, set a goal, and generate microlearning artifacts grounded in
-              your Knowledge Graph, RAG context, and user memory.
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="p-2 text-slate-500 dark:text-slate-400">
+              <span className="material-symbols-outlined">notifications</span>
+            </button>
+            <div className="size-8 rounded-full bg-slate-300" />
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 px-6 pt-8 pb-32 max-w-md mx-auto w-full">
+
+        {/* Greeting */}
+        <section className="mb-8">
+          <h2 className="text-2xl font-bold leading-tight">
+            Hello, Alex.
+          </h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">
+            Ready to dive back in?
+          </p>
+        </section>
+
+        {/* Current Focus Card */}
+        <section className="mb-10">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">
+            Current Focus
+          </h3>
+
+          <div className="rounded-xl bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 p-5">
+            <p className="text-xs font-medium text-primary mb-1 uppercase tracking-wide">
+              Data Structures
             </p>
-          </header>
+            <h4 className="text-xl font-bold mb-2">
+              Linked Lists
+            </h4>
+            <p className="text-sm text-slate-500 mb-6">
+              Subtopic: Singly Linked Lists
+            </p>
 
-          <Card className="glow">
-            <CardHeader>
-              <h2 className="text-xl font-display">Learning Request</h2>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Topic" />
-                <Input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="User ID" />
-              </div>
-              <Textarea value={goal} onChange={(e) => setGoal(e.target.value)} rows={4} />
-              <div className="flex flex-wrap gap-3">
-                <Button onClick={handleLearn}>Generate Output</Button>
-                <Button variant="ghost" onClick={() => setOutput("")}>Clear Output</Button>
-              </div>
-            </CardContent>
-          </Card>
+            <Link href="/session">
+              <button className="bg-primary text-white px-5 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 active:scale-95 transition-transform">
+                <span className="material-symbols-outlined text-base">
+                  play_arrow
+                </span>
+                Resume Session
+              </button>
+            </Link>
+          </div>
+        </section>
 
-          <Card className="glow">
-            <CardHeader>
-              <h2 className="text-xl font-display">Document Ingestion</h2>
-            </CardHeader>
-            <CardContent>
-              <Input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-              <Button onClick={handleIngest}>Upload + Ingest</Button>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Micro Session Config */}
+        <section className="mb-10">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">
+            Micro-Session Config
+          </h3>
 
-        <div className="space-y-6">
-          <Card className="glow">
-            <CardHeader>
-              <h2 className="text-xl font-display">Status</h2>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-ink/70">{status || "Waiting for input..."}</p>
-            </CardContent>
-          </Card>
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm space-y-5">
 
-          <Card className="glow">
-            <CardHeader>
-              <h2 className="text-xl font-display">Learning Output</h2>
-            </CardHeader>
-            <CardContent>
-              <pre className="whitespace-pre-wrap text-sm text-ink/80">{output || "No output yet."}</pre>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-    </main>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-2">
+                I WANT TO STUDY...
+              </label>
+              <select className="w-full bg-slate-50 dark:bg-slate-800 rounded-lg py-3 px-4 text-sm">
+                <option>Data Structures</option>
+                <option>Algorithms</option>
+                <option>Operating Systems</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-2">
+                MY GOAL IS...
+              </label>
+              <select className="w-full bg-slate-50 dark:bg-slate-800 rounded-lg py-3 px-4 text-sm">
+                <option>Review Concepts</option>
+                <option>Solve Practice Problems</option>
+                <option>Quick Knowledge Check</option>
+              </select>
+            </div>
+
+            <button className="w-full bg-primary text-white py-4 rounded-xl font-bold shadow-lg shadow-primary/25 flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
+              <span className="material-symbols-outlined">
+                bolt
+              </span>
+              Start Learning
+            </button>
+          </div>
+        </section>
+
+      </main>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-background-dark border-t border-slate-200 dark:border-slate-800 pb-6 pt-3 px-10 flex justify-between items-center">
+        
+        <Link href="/" className="flex flex-col items-center gap-1 text-primary">
+          <span className="material-symbols-outlined font-variation-fill-1">
+            home
+          </span>
+          <span className="text-[10px] font-semibold">Home</span>
+        </Link>
+
+        <Link href="/library" className="flex flex-col items-center gap-1 text-slate-400 hover:text-primary">
+          <span className="material-symbols-outlined">
+            menu_book
+          </span>
+          <span className="text-[10px] font-semibold">Library</span>
+        </Link>
+
+        <Link href="/profile" className="flex flex-col items-center gap-1 text-slate-400 hover:text-primary">
+          <span className="material-symbols-outlined">
+            person
+          </span>
+          <span className="text-[10px] font-semibold">Profile</span>
+        </Link>
+
+      </nav>
+    </div>
   );
 }
+
