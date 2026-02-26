@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Learner Dashboard - LearnPulse</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#307de8",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111821",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Lexend', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center justify-between px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-9 rounded-full bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[22px]">auto_stories</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">LearnPulse</h1>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="size-8 rounded-full bg-cover bg-center ring-2 ring-primary/20" data-alt="User profile portrait of a young man" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAqGNRSWZFYxNdCgCom-bo_IUsfiyD3Xuo7PjOLZtijJ4A5rRfwHaMK-WqUbjevE2_HLCAQe_PJZ0OY2Mflx_j-fNYPlBXlSshN2JvZUm3ijChWwL9eM9Vj0dNQSY8Ch6Dia8-yhe8gRNKg15dg3AI6ECv-dqxgJCB-Bas_Pic0ChBs_-iLbXUPCc467E_ESSDRdBe7M2B5ajetlO1fXeewMZ3lvtRLQUST09BvkKnmEIDwpb2sYDW6MzHyCB7Z9vGEtEcMPQ6V3Ho')"></div>
+</div>
+</div>
+</header>
+<main class="flex-1 px-6 pt-8 pb-32 max-w-md mx-auto w-full">
+<!-- Personalized Greeting -->
+<section class="mb-8">
+<h2 class="text-2xl font-bold leading-tight">Hello, Alex.</h2>
+<p class="text-slate-500 dark:text-slate-400 mt-1">Ready to dive back in?</p>
+</section>
+<!-- Current Focus Card -->
+<section class="mb-10">
+<h3 class="text-sm font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">Current Focus</h3>
+<div class="relative overflow-hidden rounded-xl bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 p-5">
+<div class="flex justify-between items-start gap-4">
+<div class="flex-1">
+<p class="text-xs font-medium text-primary mb-1 uppercase tracking-wide">Data Structures</p>
+<h4 class="text-xl font-bold mb-2">Linked Lists</h4>
+<p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Subtopic: Singly Linked Lists</p>
+<button class="bg-primary text-white px-5 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-base">play_arrow</span>
+                            Resume Session
+                        </button>
+</div>
+<div class="w-24 h-24 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center bg-cover bg-center" data-alt="Abstract visualization of nodes and connections" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCqDuzLhbeNhXroP5GCcRgIRk7ZunyQ4bZnBDUY6kg_8JRUyYDX-XofQ7chru2nulpTfwoe0FVqhexBP--juaIPcfpmQIt3G61s1g3JrTAMb6sU1c6NJ8VSdNhH70VpYXBP5WcdZLjQRvxCRczD4xcEmtKU30gZYAMCXF5OW8syG7yLUVpJsSgh7USpNxbP-CCF-CeAXfA_-Cx4AvJBqDrKynhKECUDfhqwcf-Osn6UjRzMfRy0ey6LymRt4ZZO3by_AyL9-OZggiw')">
+</div>
+</div>
+</div>
+</section>
+<!-- Session Configurator -->
+<section class="mb-10">
+<h3 class="text-sm font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">Micro-Session Config</h3>
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm">
+<div class="space-y-5">
+<!-- Topic Selector -->
+<div>
+<label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">I WANT TO STUDY...</label>
+<div class="relative">
+<select class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-lg py-3 pl-4 pr-10 text-sm appearance-none focus:ring-2 focus:ring-primary/50 transition-all">
+<option>Data Structures</option>
+<option>Algorithms</option>
+<option>Operating Systems</option>
+<option>Computer Architecture</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Goal Selector -->
+<div>
+<label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">MY GOAL IS...</label>
+<div class="relative">
+<select class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-lg py-3 pl-4 pr-10 text-sm appearance-none focus:ring-2 focus:ring-primary/50 transition-all">
+<option>Review Concepts</option>
+<option>Solve Practice Problems</option>
+<option>Deep Dive Lesson</option>
+<option>Quick Knowledge Check</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Time Selector -->
+<div>
+<label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">I HAVE...</label>
+<div class="grid grid-cols-3 gap-3">
+<button class="py-2.5 rounded-lg border-2 border-slate-100 dark:border-slate-800 text-xs font-medium hover:bg-primary/5 hover:border-primary/30 transition-all">5-10m</button>
+<button class="py-2.5 rounded-lg border-2 border-primary bg-primary/10 text-primary text-xs font-bold transition-all">15-20m</button>
+<button class="py-2.5 rounded-lg border-2 border-slate-100 dark:border-slate-800 text-xs font-medium hover:bg-primary/5 hover:border-primary/30 transition-all">30m+</button>
+</div>
+</div>
+<!-- CTA Button -->
+<button class="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold shadow-lg shadow-primary/25 mt-2 flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined">bolt</span>
+                        Start Learning
+                    </button>
+</div>
+</div>
+</section>
+<!-- Weekly Activity Progress -->
+<section class="mb-10">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-sm font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Weekly Activity</h3>
+<span class="text-xs font-medium text-primary">120m total</span>
+</div>
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm">
+<div class="flex items-end justify-between h-24 gap-2">
+<!-- Monday -->
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-12 relative overflow-hidden">
+<div class="absolute bottom-0 w-full bg-primary/40 h-[60%] rounded-full"></div>
+</div>
+<span class="text-[10px] font-medium text-slate-400 uppercase">M</span>
+</div>
+<!-- Tuesday -->
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-16 relative overflow-hidden">
+<div class="absolute bottom-0 w-full bg-primary/40 h-[80%] rounded-full"></div>
+</div>
+<span class="text-[10px] font-medium text-slate-400 uppercase">T</span>
+</div>
+<!-- Wednesday -->
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-20 relative overflow-hidden">
+<div class="absolute bottom-0 w-full bg-primary h-[95%] rounded-full"></div>
+</div>
+<span class="text-[10px] font-bold text-primary uppercase">W</span>
+</div>
+<!-- Thursday -->
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-8 relative overflow-hidden">
+<div class="absolute bottom-0 w-full bg-primary/40 h-[40%] rounded-full"></div>
+</div>
+<span class="text-[10px] font-medium text-slate-400 uppercase">T</span>
+</div>
+<!-- Friday -->
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-14 relative overflow-hidden">
+<div class="absolute bottom-0 w-full bg-primary/40 h-[70%] rounded-full"></div>
+</div>
+<span class="text-[10px] font-medium text-slate-400 uppercase">F</span>
+</div>
+<!-- Saturday -->
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-4 relative overflow-hidden">
+</div>
+<span class="text-[10px] font-medium text-slate-400 uppercase">S</span>
+</div>
+<!-- Sunday -->
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-4 relative overflow-hidden">
+</div>
+<span class="text-[10px] font-medium text-slate-400 uppercase">S</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar (iOS style) -->
+<nav class="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-background-dark/90 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 pb-8 pt-3 px-10 flex justify-between items-center z-50">
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined font-variation-fill-1">home</span>
+<span class="text-[10px] font-semibold">Home</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="text-[10px] font-semibold">Library</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">analytics</span>
+<span class="text-[10px] font-semibold">Progress</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-semibold">Profile</span>
+</button>
+</nav>
+<style>
+        .font-variation-fill-1 {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</body></html>
