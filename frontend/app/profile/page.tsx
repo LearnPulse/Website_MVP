@@ -183,6 +183,7 @@ export default function ProfilePage() {
                 value={dailyMinutes}
                 onChange={(e) => setDailyMinutes(Number(e.target.value))}
                 className="w-full h-3 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-primary"
+                title="Daily time commitment in minutes"
               />
 
               <div className="flex justify-between mt-4 text-sm text-slate-400 font-medium px-1">
@@ -248,12 +249,14 @@ export default function ProfilePage() {
                     <p className="text-slate-600 dark:text-slate-400">Only nudge me during my learning window</p>
                   </div>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
+                <label htmlFor="notifications-toggle" className="relative inline-flex items-center cursor-pointer">
                   <input
+                    id="notifications-toggle"
                     type="checkbox"
                     checked={notificationsEnabled}
                     onChange={(e) => setNotificationsEnabled(e.target.checked)}
                     className="sr-only peer"
+                    title="Enable adaptive pulse reminders"
                   />
                   <div className="w-14 h-8 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-6 rtl:peer-checked:after:-translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-7 after:w-7 after:transition-all dark:border-slate-600 peer-checked:bg-primary"></div>
                 </label>

@@ -62,7 +62,7 @@ export default function Dashboard() {
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">I WANT TO STUDY...</label>
                     <div className="relative">
-                      <select value={topicSelected} onChange={(e) => setTopicSelected(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-lg py-3 pl-4 pr-10 text-base appearance-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer text-slate-900 dark:text-white">
+                      <select value={topicSelected} onChange={(e) => setTopicSelected(e.target.value)} aria-label="Topic to study" className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-lg py-3 pl-4 pr-10 text-base appearance-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer text-slate-900 dark:text-white">
                         <option>Data Structures</option>
                         <option>Algorithms</option>
                         <option>Operating Systems</option>
@@ -76,7 +76,7 @@ export default function Dashboard() {
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">MY GOAL IS...</label>
                     <div className="relative">
-                      <select value={goalSelected} onChange={(e) => setGoalSelected(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-lg py-3 pl-4 pr-10 text-base appearance-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer text-slate-900 dark:text-white">
+                      <select value={goalSelected} onChange={(e) => setGoalSelected(e.target.value)} aria-label="Learning goal" className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-lg py-3 pl-4 pr-10 text-base appearance-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer text-slate-900 dark:text-white">
                         <option>Review Concepts</option>
                         <option>Solve Practice Problems</option>
                         <option>Deep Dive Lesson</option>

@@ -130,6 +130,7 @@ export function DocumentUpload({
         onChange={handleFileSelect}
         className="hidden"
         disabled={isLoading}
+        aria-label="Upload document file"
       />
 
       <div
