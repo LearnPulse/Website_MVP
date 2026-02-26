@@ -1,22 +1,24 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
       fontFamily: {
-        display: ["'Space Grotesk'", "sans-serif"],
-        body: ["'Inter Tight'", "sans-serif"]
+        display: ["Lexend", "sans-serif"],
+        body: ["Lexend", "sans-serif"]
       },
       colors: {
-        ink: "#0b0b0f",
-        paper: "#f6f1ea",
-        accent: "#00b39f",
-        accentDeep: "#006b61"
+        primary: "#307de8",
+        "background-light": "#f6f7f8",
+        "background-dark": "#111821"
       },
-      boxShadow: {
-        soft: "0 12px 30px rgba(0,0,0,0.12)",
-        ring: "0 0 0 2px rgba(0,179,159,0.35)"
+      borderRadius: {
+        DEFAULT: "0.25rem",
+        lg: "0.5rem",
+        xl: "0.75rem",
+        full: "9999px"
       }
     }
   },
