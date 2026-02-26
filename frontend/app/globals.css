@@ -2,20 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light;
+@layer base {
+  body {
+    font-family: 'Lexend', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .hide-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+
+  .material-symbols-outlined.fill {
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
 }
 
-body {
-  @apply bg-paper text-ink font-body;
-}
+@layer components {
+  .bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-background-dark/90 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 pb-8 pt-3 px-10 flex justify-between items-center z-50;
+  }
 
-.gradient-bg {
-  background: radial-gradient(circle at top left, #fef3d6 0%, transparent 45%),
-    radial-gradient(circle at top right, #dff8f4 0%, transparent 50%),
-    linear-gradient(180deg, #f6f1ea 0%, #efe6db 100%);
-}
+  .nav-item {
+    @apply flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors;
+  }
 
-.glow {
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04), 0 22px 60px rgba(0, 0, 0, 0.08);
+  .nav-item.active {
+    @apply text-primary;
+  }
 }
