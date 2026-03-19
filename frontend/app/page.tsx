@@ -6,6 +6,9 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
+// 1. IMPORT YOUR NEW GRAPH COMPONENT
+// Adjust this path if you put the file somewhere else
+
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 console.log("API base:", apiBase);
@@ -48,7 +51,10 @@ export default function Home() {
   };
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-12">
+    // I added "space-y-12" here so there is a nice gap between your forms and the graph
+    <main className="mx-auto max-w-6xl px-6 py-12 space-y-12"> 
+      
+      {/* YOUR ORIGINAL TOP SECTION - UNTOUCHED */}
       <section className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-6">
           <header className="space-y-3">
@@ -71,7 +77,7 @@ export default function Home() {
                 <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Topic" />
                 <Input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="User ID" />
               </div>
-              <Textarea value={goal} onChange={(e) => setGoal(e.target.value)} rows={4} />
+              <Textarea value={goal} onChange={(e) => setGoal(e.target.value)} rows={4} className="my-4" />
               <div className="flex flex-wrap gap-3">
                 <Button onClick={handleLearn}>Generate Output</Button>
                 <Button variant="ghost" onClick={() => setOutput("")}>Clear Output</Button>
@@ -83,7 +89,7 @@ export default function Home() {
             <CardHeader>
               <h2 className="text-xl font-display">Document Ingestion</h2>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <Input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
               <Button onClick={handleIngest}>Upload + Ingest</Button>
             </CardContent>
@@ -100,7 +106,7 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card className="glow">
+          <Card className="glow h-full">
             <CardHeader>
               <h2 className="text-xl font-display">Learning Output</h2>
             </CardHeader>
@@ -110,6 +116,7 @@ export default function Home() {
           </Card>
         </div>
       </section>
+
     </main>
   );
 }
