@@ -1,62 +1,41 @@
 {
   "concept_nodes": [
-    {
-      "id": "concept_system_design",
-      "type": "concept",
-      "name": "System Design"
-    },
-    {
-      "id": "concept_dsa",
-      "type": "concept",
-      "name": "Data Structures & Algorithms"
-    }
+    {"id": "big_o", "type": "Concept", "name": "Big O Notation", "difficulty": "Beginner"},
+    {"id": "arrays", "type": "Concept", "name": "Arrays", "difficulty": "Beginner"},
+    {"id": "linked_lists", "type": "Concept", "name": "Linked Lists", "difficulty": "Beginner"},
+    {"id": "stacks", "type": "Concept", "name": "Stacks", "difficulty": "Intermediate"},
+    {"id": "queues", "type": "Concept", "name": "Queues", "difficulty": "Intermediate"},
+    {"id": "hash_tables", "type": "Concept", "name": "Hash Tables", "difficulty": "Intermediate"},
+    {"id": "recursion", "type": "Concept", "name": "Recursion", "difficulty": "Intermediate"},
+    {"id": "trees", "type": "Concept", "name": "Trees", "difficulty": "Intermediate"},
+    {"id": "bst", "type": "Concept", "name": "Binary Search Trees", "difficulty": "Intermediate"},
+    {"id": "graphs", "type": "Concept", "name": "Graphs", "difficulty": "Advanced"},
+    {"id": "bfs", "type": "Concept", "name": "Breadth-First Search", "difficulty": "Advanced"},
+    {"id": "dfs", "type": "Concept", "name": "Depth-First Search", "difficulty": "Advanced"},
+    {"id": "sorting", "type": "Concept", "name": "Sorting Algorithms", "difficulty": "Beginner"},
+    {"id": "merge_sort", "type": "Concept", "name": "Merge Sort", "difficulty": "Intermediate"},
+    {"id": "dp", "type": "Concept", "name": "Dynamic Programming", "difficulty": "Advanced"}
   ],
-  "source_nodes": [
-    {
-      "id": "source_795b43757ec74f29862e1a30b2214f10",
-      "type": "source",
-      "doc_name": "test.txt",
-      "uploader_id": "demo-user"
-    },
-    {
-      "id": "source_fd1a889d369144d4a320a8332742d320",
-      "type": "source",
-      "doc_name": "test.txt",
-      "uploader_id": "demo-user"
-    },
-    {
-      "id": "source_370db1d8b16f42b5a1839933a440bd82",
-      "type": "source",
-      "doc_name": "Beta Writeup - CSE 491 - Project 1 .pdf",
-      "uploader_id": "demo-user"
-    },
-    {
-      "id": "source_3e6f041a898942849ec6854915d960d0",
-      "type": "source",
-      "doc_name": "Team-Contract.pdf",
-      "uploader_id": "demo-user"
-    }
-  ],
+  "source_nodes": [],
   "edges": [
-    {
-      "from": "source_795b43757ec74f29862e1a30b2214f10",
-      "to": "System Design",
-      "type": "supports"
-    },
-    {
-      "from": "source_fd1a889d369144d4a320a8332742d320",
-      "to": "System Design",
-      "type": "supports"
-    },
-    {
-      "from": "source_370db1d8b16f42b5a1839933a440bd82",
-      "to": "System Design",
-      "type": "supports"
-    },
-    {
-      "from": "source_3e6f041a898942849ec6854915d960d0",
-      "to": "System Design",
-      "type": "supports"
-    }
+    {"source": "big_o", "target": "arrays", "type": "PREREQUISITE_FOR"},
+    {"source": "big_o", "target": "sorting", "type": "PREREQUISITE_FOR"},
+    {"source": "arrays", "target": "stacks", "type": "PREREQUISITE_FOR"},
+    {"source": "arrays", "target": "queues", "type": "PREREQUISITE_FOR"},
+    {"source": "arrays", "target": "hash_tables", "type": "PREREQUISITE_FOR"},
+    {"source": "linked_lists", "target": "stacks", "type": "PREREQUISITE_FOR"},
+    {"source": "linked_lists", "target": "queues", "type": "PREREQUISITE_FOR"},
+    {"source": "linked_lists", "target": "trees", "type": "PREREQUISITE_FOR"},
+    {"source": "recursion", "target": "trees", "type": "PREREQUISITE_FOR"},
+    {"source": "recursion", "target": "dfs", "type": "PREREQUISITE_FOR"},
+    {"source": "recursion", "target": "merge_sort", "type": "PREREQUISITE_FOR"},
+    {"source": "recursion", "target": "dp", "type": "PREREQUISITE_FOR"},
+    {"source": "trees", "target": "bst", "type": "PREREQUISITE_FOR"},
+    {"source": "trees", "target": "graphs", "type": "PREREQUISITE_FOR"},
+    {"source": "graphs", "target": "bfs", "type": "PREREQUISITE_FOR"},
+    {"source": "graphs", "target": "dfs", "type": "PREREQUISITE_FOR"},
+    {"source": "stacks", "target": "dfs", "type": "PREREQUISITE_FOR"},
+    {"source": "queues", "target": "bfs", "type": "PREREQUISITE_FOR"},
+    {"source": "sorting", "target": "merge_sort", "type": "PART_OF"}
   ]
 }

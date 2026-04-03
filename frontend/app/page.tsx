@@ -5,6 +5,10 @@ import Link from "next/link";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useDashboardData } from "@/hooks/useDashboardData";
 
+// 1. IMPORT YOUR NEW GRAPH COMPONENT
+// Adjust this path if you put the file somewhere else
+
+const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 export default function Dashboard() {
   const userId = "user_123"; // TODO: Get from auth context/session
   const { profile, stats, weeklyActivity, isLoading } = useDashboardData({ userId });
@@ -107,14 +111,23 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* CTA Button */}
-                <button className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold shadow-lg shadow-primary/25 mt-8 flex items-center justify-center gap-2 active:scale-[0.98] transition-all text-lg">
-                  <span className="material-symbols-outlined">bolt</span>
-                  Start Learning
-                </button>
-              </div>
-            </section>
-          </div>
+  return (
+    // I added "space-y-12" here so there is a nice gap between your forms and the graph
+    <main className="mx-auto max-w-6xl px-6 py-12 space-y-12"> 
+      
+      {/* YOUR ORIGINAL TOP SECTION - UNTOUCHED */}
+      <section className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="space-y-6">
+          <header className="space-y-3">
+            <p className="text-sm uppercase tracking-[0.2em] text-ink/50">For students by students</p>
+            <h1 className="text-4xl font-display text-ink">
+              LearnPulse Foundation
+            </h1>
+            <p className="text-lg text-ink/70">
+              Upload learning sources, set a goal, and generate microlearning artifacts grounded in
+              your Knowledge Graph, RAG context, and user memory.
+            </p>
+          </header>
 
           {/* Right Column - Sidebar */}
           <div className="col-span-1 space-y-8">
@@ -126,53 +139,45 @@ export default function Dashboard() {
                   {isLoading ? "..." : `${weeklyActivity.reduce((sum, day) => sum + day.minutes, 0)}m total`}
                 </span>
               </div>
-              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm">
-                <div className="space-y-4">
-                  {isLoading ? (
-                    <p className="text-slate-400">Loading activity...</p>
-                  ) : (
-                    weeklyActivity.map((item, i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <span className={`text-xs font-medium w-20 ${item.percentage > 80 ? "font-bold text-primary" : "text-slate-400"}`}>
-                          {item.day.slice(0, 3)}
-                        </span>
-                        <div className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${item.percentage > 80 ? "bg-primary" : "bg-primary/40"}`}
-                            style={{ width: `${item.percentage}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-xs text-slate-500 dark:text-slate-400 w-10 text-right">{item.percentage}%</span>
-                      </div>
-                    ))
-                  )}
-                </div>
+              <Textarea value={goal} onChange={(e) => setGoal(e.target.value)} rows={4} className="my-4" />
+              <div className="flex flex-wrap gap-3">
+                <Button onClick={handleLearn}>Generate Output</Button>
+                <Button variant="ghost" onClick={() => setOutput("")}>Clear Output</Button>
               </div>
             </section>
 
-            {/* Stats Card */}
-            <section>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">Your Stats</h3>
-              <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/5 rounded-xl border border-primary/20 p-6 shadow-sm">
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs text-slate-400 uppercase tracking-wider">Learning Streak</p>
-                    <p className="text-2xl font-bold text-primary">{isLoading ? "..." : `${stats?.learningStreak || 0} days`}</p>
-                  </div>
-                  <div className="pt-4 border-t border-primary/20">
-                    <p className="text-xs text-slate-400 uppercase tracking-wider">Topics Completed</p>
-                    <p className="text-2xl font-bold text-primary">{isLoading ? "..." : stats?.topicsCompleted || 0}</p>
-                  </div>
-                  <div className="pt-4 border-t border-primary/20">
-                    <p className="text-xs text-slate-400 uppercase tracking-wider">Quiz Average</p>
-                    <p className="text-2xl font-bold text-primary">{isLoading ? "..." : `${stats?.quizAverage || 0}%`}</p>
-                  </div>
-                </div>
-              </div>
-            </section>
-          </div>
+          <Card className="glow">
+            <CardHeader>
+              <h2 className="text-xl font-display">Document Ingestion</h2>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+              <Button onClick={handleIngest}>Upload + Ingest</Button>
+            </CardContent>
+          </Card>
         </div>
-      </div>
-    </DashboardLayout>
+
+        <div className="space-y-6">
+          <Card className="glow">
+            <CardHeader>
+              <h2 className="text-xl font-display">Status</h2>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-ink/70">{status || "Waiting for input..."}</p>
+            </CardContent>
+          </Card>
+
+          <Card className="glow h-full">
+            <CardHeader>
+              <h2 className="text-xl font-display">Learning Output</h2>
+            </CardHeader>
+            <CardContent>
+              <pre className="whitespace-pre-wrap text-sm text-ink/80">{output || "No output yet."}</pre>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+    </main>
   );
 }
