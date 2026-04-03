@@ -2,7 +2,7 @@ from typing import Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.retrieval_service import retrieve
-from app.services.llm_service import generate_learning_output, decide_learning_format
+from app.agents.output_agent import generate_learning_output, decide_learning_format
 from app.services.kg_service import load_kg
 from app.services.memory_service import get_user_memory
 

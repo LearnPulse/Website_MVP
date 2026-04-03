@@ -1,18 +1,20 @@
 import "./globals.css";
-import { Space_Grotesk, Inter_Tight } from "next/font/google";
+import { Lexend } from "next/font/google";
 
-const space = Space_Grotesk({ subsets: ["latin"], variable: "--font-display" });
-const interTight = Inter_Tight({ subsets: ["latin"], variable: "--font-body" });
+const lexend = Lexend({ subsets: ["latin"], variable: "--font-display", weight: ["300", "400", "500", "600", "700"] });
 
 export const metadata = {
   title: "LearnPulse",
-  description: "Minimal end-to-end learning system"
+  description: "Adaptive AI-powered learning platform"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className={`${space.variable} ${interTight.variable} gradient-bg min-h-screen`}>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+      </head>
+      <body className={`${lexend.variable} min-h-screen bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display transition-colors duration-200`}>
         {children}
       </body>
     </html>
