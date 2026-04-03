@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     kg_path: str = Field(default=str(_repo_root() / "backend/data/kg/graph.json"))
     upload_dir: str = Field(default=str(_repo_root() / "backend/data/uploads"))
     cors_origins: List[str] = Field(default=["*"])
+    jwt_secret_key: str = Field(default="change-me-in-production")
+    jwt_algorithm: str = Field(default="HS256")
+    jwt_expire_minutes: int = Field(default=60 * 24 * 7)  # 7 days
 
     class Config:
         env_file = ".env"

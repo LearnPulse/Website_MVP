@@ -1,7 +1,7 @@
 # LearnPulse — Architecture & Codebase Context
 
 > Drop this file into the root of the repo. When starting a Claude Code session, say:
-> **"Read LEARNPULSE_ARCHITECTURE.md before touching any code."**
+> **"Read ARCHITECTURE_PLAN.MD before touching any code."**
 
 ---
 
@@ -9,7 +9,7 @@
 
 LearnPulse is an **agentic microlearning platform** for CS/engineering students. It replaces passive content consumption with structured, adaptive learning. Instead of a chatbot, it uses a multi-agent pipeline with retrieval-augmented generation, a knowledge graph, and persistent learner memory to produce personalized study artifacts — cheatsheets, flashcards, quizzes, diagrams, and audio scripts — grounded in the user's own uploaded materials.
 
-**Stack:** FastAPI · Next.js App Router + shadcn UI · LangGraph · ChromaDB · Postgres + Alembic · Gemini API
+**Stack:** FastAPI · Next.js App Router + shadcn UI · LangGraph · ChromaDB · NetworkX · Postgres + Alembic · Gemini API · Google OAuth (next-auth)
 
 ---
 
@@ -25,7 +25,7 @@ Frontend (Next.js App Router · shadcn UI · learning path UI)
  │
  ▼
 FastAPI  ·  /ingest   /ask   /progress   /auth
- ├── Auth middleware
+ ├── Auth middleware (JWT — issued after Google OAuth validation)
  └── User prefs loader ──────────────────────────────► Postgres (on session start)
  │
  ▼
@@ -86,7 +86,7 @@ Chunk + split  (overlapping windows)
            │    relationships: [{ from, to, type }]
            │  }
            │
-           └──► add_concepts() tool ──► Knowledge graph
+           └──► add_concepts() tool ──► Knowledge graph (NetworkX + JSON)
                                         (nodes + edges + chunk_ids written)
 ```
 
@@ -137,24 +137,57 @@ def add_concepts(chunks: list[str], source_id: str) -> None:
 
 ---
 
-## Knowledge Graph — Data Model
+## Knowledge Graph — Data Model & Implementation
+
+### Storage: NetworkX + JSON persistence
+
+The knowledge graph uses **NetworkX** (`nx.DiGraph`) in memory, persisted as a JSON flat file at `backend/data/kg/graph.json`. No external graph database. NetworkX provides topological sort, ancestor/descendant traversal, and neighbor lookup out of the box.
 
 ```python
-# Concept node
-{
-  "id": "uuid",
-  "name": "Attention mechanism",
-  "description": "1-2 sentence explanation",
-  "chunk_ids": ["abc123", "def456"],  # bridge back to ChromaDB
-  "source_id": "document_uuid"
-}
+import networkx as nx
 
-# Relationship edge
-{
-  "from": "concept_id",
-  "to": "concept_id",
-  "type": "prerequisite | related | part_of | example_of"
-}
+# load
+def load_kg() -> nx.DiGraph:
+    data = json.loads(Path(settings.kg_path).read_text())
+    return nx.node_link_graph(data)
+
+# save
+def save_kg(G: nx.DiGraph) -> None:
+    data = nx.node_link_data(G)
+    Path(settings.kg_path).write_text(json.dumps(data, indent=2))
+
+# key operations (all built-in)
+ordered  = list(nx.topological_sort(G))        # learning path order
+prereqs  = nx.ancestors(G, concept_id)         # all prerequisites
+unlocks  = list(G.successors(concept_id))      # what this concept unlocks
+neighbors = list(G.neighbors(concept_id))      # nearby concepts for context
+```
+
+### graph.json starts empty — no hardcoded concepts
+
+Concepts are **only** created by the Concept Extractor sub-agent when a user uploads a document. The initial `graph.json` contains only the empty structure:
+
+```json
+{ "directed": true, "multigraph": false, "graph": {}, "nodes": [], "links": [] }
+```
+
+### Node attributes stored on each NetworkX node
+
+```python
+# concept node (id is the NetworkX node key)
+G.add_node(concept_id, **{
+    "name": "Attention mechanism",
+    "description": "1-2 sentence explanation",
+    "chunk_ids": ["abc123", "def456"],   # bridge back to ChromaDB
+    "source_id": "document_uuid"
+})
+```
+
+### Edge attributes
+
+```python
+G.add_edge(from_id, to_id, type="prerequisite")
+# type values: prerequisite | related | part_of | example_of
 ```
 
 `prerequisite` edges define learning path order. A concept unlocks when its prerequisite reaches ≥ 50 mastery. A concept is considered mastered at ≥ 70.
@@ -165,14 +198,15 @@ def add_concepts(chunks: list[str], source_id: str) -> None:
 
 ```sql
 CREATE TABLE users (
-  id UUID PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT UNIQUE NOT NULL,
-  hashed_password TEXT NOT NULL,
+  google_sub TEXT UNIQUE NOT NULL,   -- Google's stable user ID (OAuth sub claim)
+  display_name TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE user_goals (
-  id UUID PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id),
   goal_text TEXT NOT NULL,
   target_concept_id TEXT,
@@ -180,7 +214,7 @@ CREATE TABLE user_goals (
 );
 
 CREATE TABLE user_concepts (
-  id UUID PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id),
   concept_id TEXT NOT NULL,
   mastery_score INTEGER DEFAULT 0,   -- 0–100
@@ -196,6 +230,10 @@ CREATE TABLE user_preferences (
   session_length TEXT DEFAULT 'micro'
 );
 ```
+
+The old `user_memory` table is replaced by these four tables. Migration: Alembic revision 0002 creates the new tables, revision 0003 drops `user_memory` after the new flow is verified end-to-end.
+
+No `hashed_password` — authentication is exclusively via Google OAuth. `passlib` is not needed.
 
 ---
 
@@ -216,7 +254,7 @@ Concept unlocks next: ≥ 50. Concept mastered: ≥ 70.
 
 ```
 Given the following text chunks from an uploaded document, extract the key concepts
-and relationships. Return ONLY valid JSON:
+and relationships. Return ONLY valid JSON (use response_mime_type="application/json"):
 
 {
   "concepts": [
@@ -239,6 +277,8 @@ and relationships. Return ONLY valid JSON:
 Chunks:
 {chunks}
 ```
+
+Always use `response_mime_type="application/json"` in the Gemini SDK call to enforce structured output. Do not rely on prompt-only JSON enforcement.
 
 ---
 
@@ -265,6 +305,28 @@ Prioritise concepts where mastery < 50. Build on concepts where mastery >= 70.
 Always ground output in retrieved context. Never hallucinate.
 ```
 
+### LangGraph Orchestrator State
+
+```python
+class OrchestratorState(TypedDict):
+    user_id: str
+    concept_id: str
+    goal: str
+    query: str
+    preferred_formats: list[str]
+    mastery_summary: dict          # from get_user_state
+    retrieved_concepts: list[dict] # from query_concepts
+    chunk_texts: list[str]         # from fetch_chunks
+    gemini_output: str             # raw Gemini response
+    artifact_type: str             # routing decision
+    artifact_payload: dict         # structured output from sub-agent
+    messages: list                 # LangGraph message list for ReAct
+```
+
+### Async tool / session injection pattern
+
+LangGraph tools must not accept `AsyncSession` as a parameter (it would appear in the LLM's tool schema). Use `contextvars.ContextVar` to store the active session, set it in the route handler before calling the orchestrator, and read it inside tool functions.
+
 ---
 
 ## Frontend — UI Design & Flow
@@ -281,6 +343,8 @@ The entire pre-ingest experience is a single stepped flow. Nothing else is shown
 - Single textarea: "What do you want to learn?"
 - Quick-select suggestion chips below (e.g. "Transformer architecture", "DSA for interviews")
 - Continue button disabled until goal is ≥ 6 chars
+- User must be signed in via Google OAuth before reaching this step (next-auth session required)
+- `useAuth` hook auto-exchanges Google `id_token` for backend JWT (`lp_token`) on first login
 - Writes to: `user_goals`
 
 **Step 2 — Preferences**
@@ -294,7 +358,7 @@ The entire pre-ingest experience is a single stepped flow. Nothing else is shown
 - Accepts PDF and TXT, up to 10 files
 - Each uploaded file shown as a removable pill
 - "Build my learning path" CTA disabled until ≥ 1 file added
-- On submit: calls `/ingest` endpoint
+- On submit: calls `POST /ingest` for each file
 
 **Step 4 — Processing**
 - Animated step list showing exactly what is happening:
@@ -306,7 +370,7 @@ The entire pre-ingest experience is a single stepped flow. Nothing else is shown
 - Resolves to: "Your learning path is ready" + concept count + "Start learning" CTA
 - Transitions to: learning path screen
 
-**Step indicator:** 3-pip progress bar at the top. Completed pips show a checkmark and turn teal. Active pip is filled teal. Future pips are muted.
+**Step indicator:** 3-pip progress bar at the top (steps 1–3 map to pips; step 4 is the processing screen after all pips complete). Completed pips show a checkmark and turn teal. Active pip is filled teal. Future pips are muted.
 
 #### 2. Learning path (post-ingest) — main screen
 
@@ -317,7 +381,7 @@ Duolingo-style vertical concept track. Each concept is a card on the path.
 - Overall progress bar: `mastered / total concepts` as a percentage
 - e.g. "38% — 3 of 8 concepts mastered"
 
-**Concept cards** (one per KG concept node, ordered by prerequisite edges)
+**Concept cards** (one per KG concept node, ordered by prerequisite edges via `nx.topological_sort`)
 - Left column: teal dot (done) · teal outline dot (active) · muted dot (locked)
 - Connector line between dots: teal if done, muted if not
 - Card states:
@@ -345,7 +409,7 @@ Generated inline within the expanded concept card or as a full-screen overlay de
 | Flashcards | Flip card deck, self-rated (got it / review again) |
 | Quiz | 4-option MCQ, scored immediately |
 | Diagram | SVG concept map rendered inline |
-| Audio | Play button + transcript toggle |
+| Audio | Play button + transcript toggle (transcript only for MVP; no TTS synthesis) |
 
 Every artifact view fires `update_mastery(user_id, concept_id, +8, 'view')` on first open.
 
@@ -380,18 +444,18 @@ components/
     ├── Flashcards.tsx
     ├── Quiz.tsx
     ├── Diagram.tsx
-    └── Audio.tsx
+    └── Audio.tsx               # transcript only for MVP
 ```
 
 ### API calls from frontend
 
 ```
+POST /auth/google     — accepts Google ID token from next-auth, validates via google-auth,
+                        upserts user row (by google_sub), returns backend JWT stored as lp_token
 POST /ingest          — upload files, trigger ingest pipeline
-POST /ask             — send concept + goal to orchestrator, get artifact back
+POST /ask             — send concept_id + goal to orchestrator, get artifact back
 GET  /progress/:id    — get user's full mastery state for learning path render
 POST /mastery/update  — fire after artifact interaction (view, quiz, flashcard)
-POST /auth/register   — onboarding: create user
-POST /auth/login      — return JWT
 ```
 
 ---
@@ -402,22 +466,138 @@ POST /auth/login      — return JWT
 LearnPulse/Website_MVP/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py              # FastAPI entry, routes
-│   │   ├── agent/               # orchestration agent (LangGraph)
-│   │   ├── knowledge_graph.py   # KG store + query/write logic
-│   │   ├── rag/                 # ingest, chunking, embedding
-│   │   ├── models/              # Postgres models (Alembic)
-│   │   └── tools/               # shared @tool functions
+│   │   ├── main.py                  # FastAPI entry, mounts all routers
+│   │   ├── agent/                   # LangGraph orchestration (singular — not "agents")
+│   │   │   ├── orchestrator.py      # ReAct loop, OrchestratorState, build_graph()
+│   │   │   ├── concept_extractor.py # LangGraph node: Gemini → structured concept JSON
+│   │   │   └── artifacts/           # one file per artifact sub-agent
+│   │   │       ├── cheatsheet.py
+│   │   │       ├── flashcards.py
+│   │   │       ├── quiz.py
+│   │   │       ├── diagram.py
+│   │   │       └── audio.py         # returns transcript only
+│   │   ├── knowledge_graph.py       # NetworkX DiGraph: load, save, query, topological sort
+│   │   ├── rag/                     # ingest, chunking, embedding (replaces services/ingestion_service.py)
+│   │   │   └── ingest.py
+│   │   ├── models/                  # SQLAlchemy ORM models
+│   │   │   └── user.py              # User, UserGoal, UserConcept, UserPreferences
+│   │   ├── tools/                   # shared @tool functions
+│   │   │   ├── retrieval.py         # query_concepts, fetch_chunks
+│   │   │   └── user_state.py        # get_user_state, update_mastery, add_concepts
+│   │   ├── api/
+│   │   │   ├── routes.py            # /ingest, /ask, /progress, /mastery/update
+│   │   │   ├── auth_routes.py       # /auth/register, /auth/login
+│   │   │   └── deps.py              # get_current_user JWT dependency
+│   │   ├── services/                # keep: chroma_service.py, embedding_service.py
+│   │   │   ├── chroma_service.py    # keep as-is
+│   │   │   └── embedding_service.py # keep as-is
+│   │   └── core/
+│   │       └── config.py            # add jwt_secret_key, jwt_algorithm, jwt_expire_minutes
 │   └── alembic/
+│       └── versions/
+│           ├── 0001_create_user_memory.py   # existing
+│           ├── 0002_new_schema.py           # creates users/user_goals/user_concepts/user_preferences
+│           └── 0003_drop_user_memory.py     # drops user_memory after new flow verified
 ├── frontend/
 │   ├── app/
-│   │   ├── page.tsx             # root — redirects to /onboarding or /learn
-│   │   ├── onboarding/          # 4-step pre-ingest flow
-│   │   └── learn/               # learning path + artifact views
-│   └── components/
-│       ├── onboarding/          # StepIndicator, GoalInput, PreferenceSelector, UploadZone, ProcessingSteps
-│       ├── learning-path/       # GoalHeader, ConceptCard, ArtifactButton, InlineQuiz
-│       └── artifacts/           # Cheatsheet, Flashcards, Quiz, Diagram, Audio
+│   │   ├── page.tsx             # root — checks localStorage for JWT, redirects to /onboarding or /learn
+│   │   ├── onboarding/
+│   │   │   └── page.tsx         # 4-step pre-ingest flow
+│   │   └── learn/
+│   │       └── page.tsx         # learning path + artifact views
+│   ├── components/
+│   │   ├── onboarding/          # StepIndicator, GoalInput, PreferenceSelector, UploadZone, ProcessingSteps
+│   │   ├── learning-path/       # GoalHeader, ConceptCard, ArtifactButton, InlineQuiz
+│   │   ├── artifacts/           # Cheatsheet, Flashcards, Quiz, Diagram, Audio
+│   │   └── ui/                  # shadcn base components (button, card, input, textarea)
+│   ├── hooks/
+│   │   ├── useAuth.ts           # login, register, logout; stores JWT in localStorage
+│   │   ├── useProgress.ts       # GET /progress/:id, returns ConceptProgress[]
+│   │   └── useArtifact.ts       # POST /ask, caches by concept_id + artifact_type
+│   └── lib/
+│       ├── api-client.ts        # typed API calls, injects Authorization header
+│       ├── types.ts             # ConceptNode, ArtifactPayload subtypes, OnboardingState, etc.
+│       └── utils.ts             # cn() helper (keep as-is)
 ├── docs/
-└── LEARNPULSE_ARCHITECTURE.md   # ← this file
+└── ARCHITECTURE_PLAN.MD         # ← this file
 ```
+
+### Files to delete during revamp
+
+**Backend:**
+- `app/agents/orchestration_agent.py` → replaced by `app/agent/orchestrator.py`
+- `app/agents/output_agent.py` → replaced by `app/agent/artifacts/`
+- `app/services/memory_service.py` → replaced by `app/tools/user_state.py`
+- `app/services/retrieval_service.py` → replaced by `app/tools/retrieval.py`
+- `app/services/kg_service.py` → replaced by `app/knowledge_graph.py`
+- `app/schemas/learn.py` → replaced by models in `app/models/`
+- `app/schemas/memory.py` → replaced by models in `app/models/`
+- `app/utils.py` (Neo4j integration — not used in architecture)
+- `sync_kg.py` (Neo4j sync script — not used in architecture)
+
+**Frontend:**
+- `app/cheatsheet/` → replaced by inline artifact components
+- `app/artifacts/` → replaced by inline artifact components
+- `app/learning-session/` → replaced by `app/learn/`
+- `app/profile/` → preferences handled during onboarding
+- `app/graph/` → force-graph explorer not in architecture
+- `components/DashboardLayout.tsx` → replaced by learn page layout
+- `components/LearningArtifacts.tsx` → replaced by `components/artifacts/`
+- `components/DocumentUpload.tsx` → replaced by `components/onboarding/UploadZone.tsx`
+- `components/Button.tsx`, `Card.tsx`, `Input.tsx`, `Textarea.tsx`, `index.ts` → replaced by `components/ui/`
+- `components/ui/LearnPulseGraph.tsx` → force-graph not in architecture
+- `hooks/useDashboardData.ts` → replaced by `useAuth`, `useProgress`, `useArtifact`
+- `hooks/useLearningContent.ts` → replaced by `useArtifact`
+
+---
+
+## Implementation Phases
+
+### Phase 0 — Foundation (config, packages, design tokens)
+**No new features. Makes the base runnable and consistent before structural changes.**
+
+- `backend/requirements.txt`: add `langgraph>=0.2`, `langchain-google-genai>=2.0`, `langchain-core>=0.3`, `networkx>=3.3`, `google-auth>=2.0`, `python-jose[cryptography]>=3.3` (no passlib — Google OAuth only)
+- `backend/app/core/config.py`: add `jwt_secret_key`, `jwt_algorithm`, `jwt_expire_minutes`
+- `backend/data/kg/graph.json`: reset to empty NetworkX-compatible structure
+- `frontend/tailwind.config.ts`: change `primary` from `#307de8` → `#1D9E75`; add `borderWidth: { '0.5': '0.5px' }`
+- `frontend/app/globals.css`: add shadcn CSS custom properties (`--primary`, `--background`, `--foreground`, `--border`, `--ring`)
+- `frontend/components/ui/button.tsx`: fix broken token references (`bg-accent`, `text-ink`, `hover:bg-accentDeep`)
+
+### Phase 1 — Database schema + auth
+- Alembic 0002: create `users` (with `google_sub`), `user_goals`, `user_concepts`, `user_preferences`
+- `app/models/user.py`: SQLAlchemy mapped classes
+- `app/services/auth_service.py`: validate_google_token(), create_access_token(), decode_token()
+- `app/api/auth_routes.py`: POST /auth/google (validates Google ID token, upserts user, returns JWT)
+- `app/api/deps.py`: get_current_user JWT dependency
+- Frontend: `next-auth` with Google provider, `useAuth` hook, api-client auth header injection
+- Frontend env: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`
+- Backend env: `GOOGLE_CLIENT_ID` (for server-side token validation)
+
+### Phase 2 — Tools + Knowledge Graph rewrite
+- `app/knowledge_graph.py`: NetworkX DiGraph, load/save/query/topological sort
+- `app/tools/retrieval.py`: query_concepts, fetch_chunks
+- `app/tools/user_state.py`: get_user_state, update_mastery, add_concepts
+- `app/rag/ingest.py`: updated ingest — calls Concept Extractor after embedding
+- Delete: `app/services/kg_service.py`, `app/services/retrieval_service.py`, `app/utils.py`, `sync_kg.py`
+
+### Phase 3 — LangGraph orchestrator + artifact sub-agents + API routes
+- `app/agent/state.py`: OrchestratorState TypedDict
+- `app/agent/orchestrator.py`: LangGraph ReAct loop, build_graph()
+- `app/agent/concept_extractor.py`: LangGraph node, Gemini JSON extraction
+- `app/agent/artifacts/`: cheatsheet, flashcards, quiz, diagram, audio
+- `app/api/routes.py`: POST /ask, GET /progress/:id, POST /mastery/update, POST /ingest (updated)
+- Delete: `app/agents/`, `app/schemas/`, `app/services/memory_service.py`
+
+### Phase 4 — Frontend rebuild
+- Delete old pages: cheatsheet, artifacts, learning-session, profile, graph
+- Delete old components: DashboardLayout, LearningArtifacts, DocumentUpload, Button, Card, Input, Textarea, LearnPulseGraph
+- `app/page.tsx`: JWT check → redirect to /onboarding or /learn
+- `app/onboarding/page.tsx`: 4-step flow
+- `app/learn/page.tsx`: learning path
+- All new components in `components/onboarding/`, `components/learning-path/`, `components/artifacts/`
+- New hooks: useAuth, useProgress, useArtifact
+- Updated: lib/types.ts, lib/api-client.ts
+
+### Phase 5 — Cleanup
+- Alembic 0003: drop `user_memory` table
+- Design spec audit: 0.5px borders, sentence case, no gradients, teal throughout
