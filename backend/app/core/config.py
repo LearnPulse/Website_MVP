@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(default="change-me-in-production")
     jwt_algorithm: str = Field(default="HS256")
     jwt_expire_minutes: int = Field(default=60 * 24 * 7)  # 7 days
+    google_client_id: str = Field(default="")  # for server-side ID token validation
+    database_ssl: bool = Field(default=False)  # set True for Neon / Cloud SQL
 
     class Config:
         env_file = ".env"

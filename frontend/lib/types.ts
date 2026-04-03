@@ -1,172 +1,154 @@
-// User & Profile Types
-export interface UserProfile {
-  id: string;
-  name: string;
-  joinedDate: string;
-  avatar?: string;
-}
+// ── Generic ───────────────────────────────────────────────────────────────
 
-export interface UserStats {
-  learningStreak: number;
-  topicsCompleted: number;
-  quizAverage: number;
-}
-
-export interface UserPreferences {
-  skillLevel: "beginner" | "intermediate" | "advanced";
-  learningStyle: "visual" | "verbal" | "practical";
-  dailyMinutes: number;
-  cheatStyle: "minimalist" | "detailed";
-  notificationsEnabled: boolean;
-}
-
-// Learning Content Types
-export interface LessonContent {
-  id: string;
-  title: string;
-  topic: string;
-  category: string;
-  module: number;
-  totalModules: number;
-  progress: number;
-  content: string;
-  imageUrl?: string;
-  keyTakeaways: string[];
-  sections: LessonSection[];
-  lastUpdated: string;
-}
-
-export interface LessonSection {
-  title: string;
-  content: string;
-  items?: string[];
-}
-
-// Learning Artifacts Types (NotebookLM-style output)
-export type ArtifactType = "cheatsheet" | "podcast" | "flashcard" | "study-guide";
-
-export interface Artifact {
-  id: string;
-  type: ArtifactType;
-  title: string;
-  lessonId: string;
-  content: string;
-  metadata?: Record<string, any>;
-  generatedAt: string;
-  status: "generating" | "ready" | "error";
-}
-
-// Cheatsheet-specific
-export interface CheatSheet extends Artifact {
-  type: "cheatsheet";
-  definitions: Definition[];
-  concepts: Concept[];
-  examples: CodeExample[];
-  pitfalls: string[];
-  readTime: number;
-}
-
-export interface Definition {
-  term: string;
-  description: string;
-}
-
-export interface Concept {
-  title: string;
-  description: string;
-  icon?: string;
-}
-
-export interface CodeExample {
-  language: string;
-  code: string;
-}
-
-// Podcast-specific
-export interface PodcastArtifact extends Artifact {
-  type: "podcast";
-  transcript: string;
-  audioUrl?: string;
-  duration: number;
-  speaker?: string;
-}
-
-// Flashcard-specific
-export interface FlashcardArtifact extends Artifact {
-  type: "flashcard";
-  cards: Flashcard[];
-  cardCount: number;
-}
-
-export interface Flashcard {
-  id: string;
-  front: string;
-  back: string;
-  tags?: string[];
-}
-
-// Artifact Generation Request
-export interface GenerateArtifactRequest {
-  lessonId: string;
-  type: ArtifactType | ArtifactType[];
-  topic: string;
-  content: string;
-  userId: string;
-}
-
-export interface GenerateArtifactResponse {
-  artifacts: Artifact[];
-  lessonId: string;
-}
-
-// RAG & Learning Request Types
-export interface LearnRequest {
-  topic: string;
-  goal: string;
-  format?: string;
-  userId: string;
-}
-
-export interface LearnResponse {
-  output: string;
-  retrievedSources: string[];
-}
-
-// Document Ingestion Types
-export interface IngestResponse {
-  status: "success" | "empty";
-  chunks: number;
-  sourceId: string;
-}
-
-// Dashboard Types
-export interface DashboardData {
-  userProfile: UserProfile;
-  userStats: UserStats;
-  currentFocus: {
-    topic: string;
-    subtopic: string;
-    imageUrl?: string;
-  };
-  weeklyActivity: DayActivity[];
-  upcomingSessions: SessionConfig[];
-}
-
-export interface DayActivity {
-  day: string;
-  minutes: number;
-  percentage: number;
-}
-
-export interface SessionConfig {
-  topic: string;
-  goal: string;
-  timeAvailable: string;
-}
-
-// API Response Types
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────
+
+export interface GoogleAuthResponse {
+  access_token: string;
+  token_type: string;
+  user_id: string;
+  email: string;
+  display_name: string | null;
+}
+
+// ── Knowledge Graph ───────────────────────────────────────────────────────
+
+export interface ConceptNode {
+  id: string;
+  name: string;
+  description: string;
+  chunk_ids: string[];
+  source_id: string;
+}
+
+export type EdgeType = "prerequisite" | "related" | "part_of" | "example_of";
+
+export interface ConceptEdge {
+  from: string;
+  to: string;
+  type: EdgeType;
+}
+
+// ── Learning Path / Progress ──────────────────────────────────────────────
+
+export type ConceptState = "done" | "active" | "locked";
+export type ArtifactFormat = "cheatsheet" | "flashcards" | "quiz" | "diagram" | "audio";
+
+export interface ConceptProgress {
+  id: string;
+  name: string;
+  description: string;
+  mastery_score: number;           // 0–100
+  state: ConceptState;             // done ≥70 | active >0 | locked prerequisite <50
+  preferred_formats: ArtifactFormat[];
+  viewed_formats: ArtifactFormat[];
+}
+
+export interface ProgressResponse {
+  goal_text: string;
+  concepts: ConceptProgress[];     // ordered by topological sort
+  mastered_count: number;
+  total_count: number;
+}
+
+// ── Onboarding ────────────────────────────────────────────────────────────
+
+export interface UserGoalIn {
+  user_id: string;
+  goal_text: string;
+}
+
+export interface UserPreferencesIn {
+  user_id: string;
+  preferred_formats: ArtifactFormat[];
+  detail_level: "concise" | "detailed";
+  session_length: "micro" | "standard" | "deep";
+}
+
+export interface OnboardingState {
+  step: 0 | 1 | 2 | 3;
+  goal: string;
+  preferences: Omit<UserPreferencesIn, "user_id"> | null;
+  files: File[];
+  ingestResults: IngestResponse[];
+}
+
+// ── Ingest ────────────────────────────────────────────────────────────────
+
+export interface IngestResponse {
+  status: string;
+  doc_id: string;
+  source_id: string;
+  chunks: number;
+  concept_count: number;
+  embedding_time: number;
+  total_time: number;
+}
+
+// ── Ask / Artifacts ───────────────────────────────────────────────────────
+
+export interface AskRequest {
+  user_id: string;
+  concept_id: string;
+  goal: string;
+  artifact_type: ArtifactFormat;
+}
+
+export interface AskResponse {
+  artifact_type: ArtifactFormat;
+  concept_id: string;
+  payload: ArtifactPayload;
+}
+
+export type ArtifactPayload =
+  | CheatsheetPayload
+  | FlashcardPayload
+  | QuizPayload
+  | DiagramPayload
+  | AudioPayload;
+
+export interface CheatsheetPayload {
+  type: "cheatsheet";
+  entries: { term: string; definition: string }[];
+}
+
+export interface FlashcardPayload {
+  type: "flashcards";
+  cards: { front: string; back: string; tags: string[] }[];
+}
+
+export interface QuizQuestion {
+  stem: string;
+  options: [string, string, string, string];
+  correct_index: 0 | 1 | 2 | 3;
+}
+
+export interface QuizPayload {
+  type: "quiz";
+  questions: QuizQuestion[];
+}
+
+export interface DiagramPayload {
+  type: "diagram";
+  svg: string;
+}
+
+export interface AudioPayload {
+  type: "audio";
+  transcript: string;
+}
+
+// ── Mastery ───────────────────────────────────────────────────────────────
+
+export type MasterySource = "view" | "flashcard" | "quiz_pass" | "quiz_fail";
+
+export interface MasteryUpdateRequest {
+  user_id: string;
+  concept_id: string;
+  source: MasterySource;
 }

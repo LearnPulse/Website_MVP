@@ -1,5 +1,6 @@
 import "./globals.css";
 import { Lexend } from "next/font/google";
+import SessionWrapper from "@/components/SessionWrapper";
 
 const lexend = Lexend({ subsets: ["latin"], variable: "--font-display", weight: ["300", "400", "500", "600", "700"] });
 
@@ -15,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
       </head>
       <body className={`${lexend.variable} min-h-screen bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display transition-colors duration-200`}>
-        {children}
+        <SessionWrapper>{children}</SessionWrapper>
       </body>
     </html>
   );
