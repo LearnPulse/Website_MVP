@@ -7,6 +7,7 @@ class Base(DeclarativeBase):
     pass
 
 
+# Legacy table — kept until Alembic 0003 drops it
 class UserMemory(Base):
     __tablename__ = "user_memory"
 
@@ -17,3 +18,7 @@ class UserMemory(Base):
     mastery_history: Mapped[dict] = mapped_column(JSONB, default=dict)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+# Import new models so Alembic can detect them via Base.metadata
+from app.models.user import User, UserGoal, UserConcept, UserPreferences  # noqa: E402, F401

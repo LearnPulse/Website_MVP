@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+data/uploads/
+data/chroma/
+data/kg/graph.json
+alembic/versions/__pycache__/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/

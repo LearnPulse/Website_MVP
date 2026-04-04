@@ -12,8 +12,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         className={cn(
           "inline-flex items-center justify-center rounded-full px-5 py-2 text-sm font-semibold transition",
-          variant === "primary" && "bg-accent text-ink hover:bg-accentDeep hover:text-white",
-          variant === "ghost" && "border border-ink/10 text-ink/70 hover:text-ink",
+          variant === "primary" && "bg-primary text-white hover:opacity-90",
+          variant === "ghost" && "border-[0.5px] border-foreground/10 text-foreground/70 hover:text-foreground",
           className
         )}
         {...props}
