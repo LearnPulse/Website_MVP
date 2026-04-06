@@ -12,7 +12,7 @@ export function useAuth() {
   const [isExchanging, setIsExchanging] = useState(false);
 
   const isLoading = status === "loading" || isExchanging;
-  const isAuthenticated = !!session && !!getStoredToken();
+  const isAuthenticated = !!session;
 
   // On first sign-in, exchange Google ID token for backend JWT
   useEffect(() => {
