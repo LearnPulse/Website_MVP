@@ -13,7 +13,7 @@ interface ConceptCardProps {
   concept: ConceptProgress;
   isLast: boolean;
   onArtifactRequest: (format: ArtifactFormat) => Promise<ArtifactPayload | null>;
-  onMasteryUpdate: (source: string) => void;
+  onMasteryUpdate: (source: "view" | "flashcard" | "quiz_pass" | "quiz_fail") => void;
 }
 
 export default function ConceptCard({ concept, isLast, onArtifactRequest, onMasteryUpdate }: ConceptCardProps) {

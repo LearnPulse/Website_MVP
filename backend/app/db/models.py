@@ -1,10 +1,8 @@
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import String, DateTime, func
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import JSONB
 
-
-class Base(DeclarativeBase):
-    pass
+from app.db.base import Base
 
 
 # Legacy table — kept until Alembic 0003 drops it

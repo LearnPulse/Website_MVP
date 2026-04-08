@@ -4,7 +4,7 @@ from typing import Optional, List
 from sqlalchemy import Text, Integer, DateTime, ForeignKey, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
-from app.db.models import Base
+from app.db.base import Base
 
 
 class User(Base):

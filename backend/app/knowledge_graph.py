@@ -26,7 +26,7 @@ def load_kg() -> nx.DiGraph:
     if not path.exists() or path.stat().st_size == 0:
         return nx.DiGraph()
     data = json.loads(path.read_text())
-    return nx.node_link_graph(data, directed=True, multigraph=False)
+    return nx.node_link_graph(data, directed=True, multigraph=False, edges="links")
 
 
 def save_kg(G: nx.DiGraph) -> None:
