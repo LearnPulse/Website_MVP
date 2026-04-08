@@ -18,7 +18,7 @@ from pypdf import PdfReader
 
 from app.agent.concept_extractor import extract_concepts
 from app.core.config import settings
-from app.services.chroma_service import ChromaStore
+from app.services.chroma_service import get_chroma_store
 from app.services.embedding_service import embed_texts
 
 logger = logging.getLogger(__name__)
@@ -102,7 +102,7 @@ def ingest_document(file_path: str, user_id: str) -> dict[str, Any]:
         for i in range(len(chunks))
     ]
 
-    store = ChromaStore()
+    store = get_chroma_store()
     store.add(ids=chunk_ids, embeddings=embeddings, documents=chunk_texts, metadatas=metadatas)
     logger.info("Embedded %d chunks in %.2fs", len(chunks), embed_time)
 

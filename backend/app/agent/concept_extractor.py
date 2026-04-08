@@ -42,8 +42,18 @@ and relationships. Return ONLY valid JSON with no markdown, no code fences:
 Rules:
 - Each concept must have a unique UUID as its id.
 - chunk_ids must be actual IDs from the chunks listed below.
-- Only use relationship types: prerequisite, related, part_of, example_of.
-- Extract 3–10 concepts. Focus on the core ideas, not minor details.
+- Extract 5–15 concepts. Focus on the core ideas, not minor details.
+- Relationship direction rules (IMPORTANT — follow exactly):
+  - "prerequisite": `from` must be learned BEFORE `to`. Edge means "learn FROM first, then TO".
+    Example: {{"from": "variables_id", "to": "functions_id", "type": "prerequisite"}}
+    (variables must be understood before functions)
+  - "part_of": `from` is a component/sub-part of `to`.
+    Example: {{"from": "neuron_id", "to": "neural_network_id", "type": "part_of"}}
+  - "example_of": `from` is a concrete example/instance of `to`.
+    Example: {{"from": "bubble_sort_id", "to": "sorting_algorithm_id", "type": "example_of"}}
+  - "related": bidirectional association, neither depends on the other.
+- Use "prerequisite" generously — learners need a clear order. Prefer prerequisite over related when one concept builds on another.
+- Do NOT create cycles (e.g. A→B and B→A of the same type).
 
 Chunks:
 {chunks}

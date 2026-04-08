@@ -7,7 +7,7 @@ fetch_chunks   — retrieve raw text chunks from ChromaDB by ID
 from langchain_core.tools import tool
 
 from app.knowledge_graph import load_kg, search_concepts, get_neighborhood
-from app.services.chroma_service import ChromaStore
+from app.services.chroma_service import get_chroma_store
 
 
 @tool
@@ -54,6 +54,6 @@ def fetch_chunks(chunk_ids: list[str]) -> list[str]:
     """
     if not chunk_ids:
         return []
-    store = ChromaStore()
+    store = get_chroma_store()
     results = store.collection.get(ids=chunk_ids, include=["documents"])
     return results.get("documents", [])

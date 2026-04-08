@@ -1,0 +1,73 @@
+/* ── React Flow overrides ──────────────────────────────────────────────── */
+
+.graph-canvas { background: #0a0f16; }
+
+.react-flow__controls {
+  background: #0d1117 !important;
+  border: 1px solid #1e293b !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+.react-flow__controls-button {
+  background: #0d1117 !important;
+  border-bottom: 1px solid #1e293b !important;
+  fill: #64748b !important;
+}
+.react-flow__controls-button:hover {
+  background: #1e293b !important;
+  fill: #94a3b8 !important;
+}
+.react-flow__minimap {
+  background: #0d1117 !important;
+  border: 1px solid #1e293b !important;
+  border-radius: 8px !important;
+}
+
+/* ── Concept node — colors driven by --node-color / --node-pct CSS vars ── */
+/* These are set imperatively via ref.current.style.setProperty() in JS,    */
+/* so no JSX inline style= props are required.                               */
+
+.concept-node {
+  border-color: var(--node-color, #334155);
+}
+.concept-node .concept-bar-fill {
+  width: var(--node-pct, 0%);
+  background-color: var(--node-color, #334155);
+}
+.concept-node .concept-score {
+  color: var(--node-color, #334155);
+}
+/* React Flow Handle uses !important because RF sets inline styles itself */
+.concept-node .react-flow__handle {
+  background: var(--node-color, #334155) !important;
+  border: none !important;
+  width: 8px !important;
+  height: 8px !important;
+}
+
+/* ── Tooltip — same CSS-variable pattern ─────────────────────────────── */
+
+.node-tooltip .tooltip-badge {
+  color: var(--tip-color, #334155);
+  background-color: var(--tip-color-bg, #33415520);
+}
+.node-tooltip .tooltip-bar-fill {
+  width: var(--tip-pct, 0%);
+  background-color: var(--tip-color, #334155);
+}
+.node-tooltip .tooltip-score {
+  color: var(--tip-color, #334155);
+}
+
+/* ── Legend dots ───────────────────────────────────────────────────────── */
+
+.legend-dot-teal  { background-color: #1D9E75; }
+.legend-dot-amber { background-color: #f59e0b; }
+.legend-dot-slate { background-color: #334155; }
+
+/* ── Filter pill active states ─────────────────────────────────────────── */
+
+.filter-active-teal   { background-color: #1D9E75; border-color: #1D9E75; }
+.filter-active-slate  { background-color: #64748b; border-color: #64748b; }
+.filter-active-violet { background-color: #7c3aed; border-color: #7c3aed; }
+.filter-active-amber  { background-color: #d97706; border-color: #d97706; }

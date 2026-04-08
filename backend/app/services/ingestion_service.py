@@ -6,7 +6,7 @@ import logging
 
 from pypdf import PdfReader
 from app.services.embedding_service import embed_texts
-from app.services.chroma_service import ChromaStore
+from app.services.chroma_service import get_chroma_store
 from app.services import kg_service
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ def ingest_document(file_path: str, topic: str, uploader_id: str) -> Dict[str, A
     embed_elapsed = time.perf_counter() - embed_start
     logger.info("Embedding done file=%s chunks=%s time=%.2fs", Path(file_path).name, chunk_count, embed_elapsed)
     print(f"[ingest] embedding done time={embed_elapsed:.2f}s", flush=True)
-    store = ChromaStore()
+    store = get_chroma_store()
 
     doc_id = f"doc_{uuid.uuid4().hex}"
     ids = [f"{doc_id}_{i}" for i in range(len(chunks))]

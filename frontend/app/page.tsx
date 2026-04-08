@@ -16,7 +16,7 @@ export default function RootPage() {
     // Only redirect once the backend JWT exchange has completed
     const token = getStoredToken();
     if (!token) return;
-    router.replace("/onboarding");
+    router.replace("/dashboard");
   }, [isAuthenticated, isLoading, router]);
 
   if (status === "loading" || isLoading) {

@@ -601,3 +601,331 @@ LearnPulse/Website_MVP/
 ### Phase 5 — Cleanup
 - Alembic 0003: drop `user_memory` table
 - Design spec audit: 0.5px borders, sentence case, no gradients, teal throughout
+
+---
+
+## Phase 6+ — Full Product Roadmap
+
+> Phases 0–5 delivered a working MVP. Phases 6–10 turn it into a proper learning platform.
+
+---
+
+### Phase 6 — Fix bugs + App Shell
+
+**Bugs to fix first (blocking UX)**
+
+1. **Concept ordering / locking** — The `prerequisite` logic must only look at edges with `type == "prerequisite"`. Other edge types (`related`, `part_of`, `example_of`) must not influence locking. Fix in `routes.py`:
+   ```python
+   prereqs = [p for p in G.predecessors(cid) if G.edges[p, cid].get("type") == "prerequisite"]
+   ```
+2. **Concept extractor direction** — Clarify the extraction prompt so the LLM understands that `from → to` means "learn `from` BEFORE `to`" (i.e., `from` is the prerequisite). Fix in `concept_extractor.py` with a rules section.
+3. **Artifact 500** — Fixed by `convert_system_message_to_human=True` in orchestrator.
+
+**App Shell (layout wrapper)**
+
+Add `frontend/app/(app)/layout.tsx` — a dark sidebar shell that wraps all authenticated pages.
+
+Sidebar items:
+- LearnPulse logo (top)
+- Home (dashboard icon)
+- My Paths (book stack icon)
+- Chat (message bubble icon)
+- Profile (avatar icon, bottom)
+- Sign Out (door icon, bottom — replaces text button in headers)
+
+Sidebar is collapsible on mobile (hamburger). Uses `framer-motion` for slide-in.
+
+All routes inside `(app)/` are protected — redirect to `/` if no token.
+
+Routing changes:
+```
+/                         → sign-in page (no layout)
+/(app)/dashboard          → home
+/(app)/paths              → all paths library
+/(app)/paths/new          → onboarding (4-step)
+/(app)/paths/[pathId]     → path detail (Udemy-style modules)
+/(app)/paths/[pathId]/[conceptId]  → concept deep-dive
+/(app)/chat               → chat home / recent sessions
+/(app)/chat/[sessionId]   → active chat session
+/(app)/profile            → account + preferences
+```
+
+Old routes `/onboarding` and `/learn` redirect to new paths.
+
+---
+
+### Phase 7 — Learning Path Library + Udemy-style Path Detail
+
+**Paths Library (`/paths`)**
+
+- Grid/list of all user's learning paths
+- Each card: goal text, progress bar, concept count, last active date
+- "New path" button → `/paths/new` (current onboarding flow)
+- Ability to resume or delete a path
+
+**New DB table — `learning_paths`:**
+```sql
+CREATE TABLE learning_paths (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  goal_id UUID REFERENCES user_goals(id),
+  title TEXT NOT NULL,
+  status TEXT DEFAULT 'active',   -- active | completed | archived
+  created_at TIMESTAMP DEFAULT NOW(),
+  last_accessed_at TIMESTAMP
+);
+```
+
+**Path Detail (`/paths/[pathId]`)**
+
+Udemy-style layout:
+- **Left panel**: Section/module tree
+  - Modules are groups of concepts (auto-grouped by `part_of` edges into topic clusters)
+  - Each module shows: name, concept count, progress bar
+  - Clicking a module expands it to show concept rows (with state: locked/active/done)
+- **Right panel**: Selected concept detail
+  - Concept name + description
+  - Artifact format buttons (cheatsheet, flashcards, quiz, diagram, audio)
+  - Mastery bar
+  - "Related concepts" chips
+
+**Concept Grouping into Modules:**
+Use NetworkX community detection (or simple BFS clustering by `part_of` edges) to auto-group concepts into 3–7 modules. Store module assignment per path in a `path_modules` table or in the KG node attributes.
+
+**New API endpoints:**
+```
+GET  /paths              → list user's learning paths with progress
+POST /paths              → create path (wraps goal + preferences)
+GET  /paths/{path_id}    → path detail with modules + concept states
+DELETE /paths/{path_id}  → archive a path
+```
+
+---
+
+### Phase 8 — Chat Interface
+
+**What it is**: A conversational layer on top of the orchestrator. Users can ask freeform questions about any concept in their learning path or upload-related content. The LLM retrieves relevant KG nodes + chunks and responds in conversation.
+
+**Not a replacement for artifacts** — Chat is for exploration and clarification. Artifacts (cheatsheet, quiz etc.) remain the primary structured learning tool.
+
+**UI (`/chat` and `/chat/[sessionId]`)**
+
+- Chat home: recent sessions grouped by path/topic
+- Chat session: standard message thread UI
+  - User message bubble (right)
+  - AI response bubble (left) — supports markdown + inline code blocks
+  - "Generate artifact" button on any AI message → triggers artifact creation for the mentioned concept
+  - Concept chips inline in AI responses (clickable → go to concept detail)
+- Input: textarea, send on Enter / Shift+Enter for newline
+
+**Backend:**
+
+New LangGraph node `chat_node` — simplified ReAct: query_concepts → fetch_chunks → respond. No artifact generation. Streams output via SSE (`StreamingResponse`).
+
+New API:
+```
+POST /chat/sessions                    → create new chat session
+GET  /chat/sessions                    → list sessions (20 most recent)
+GET  /chat/sessions/{id}/messages      → get message history
+POST /chat/sessions/{id}/messages      → send message → streamed response
+```
+
+New DB tables:
+```sql
+CREATE TABLE chat_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  path_id UUID REFERENCES learning_paths(id),
+  title TEXT,                    -- auto-generated from first message
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE chat_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID REFERENCES chat_sessions(id),
+  role TEXT NOT NULL,            -- 'user' | 'assistant'
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+---
+
+### Phase 9 — Persistence, History & Cloud Storage
+
+**graph.json → Postgres JSONB**
+
+Stop persisting the knowledge graph as a JSON flat file (not suitable for cloud). Instead, store the NetworkX graph as JSONB in Postgres with one row per user (or per path in the future).
+
+```sql
+CREATE TABLE knowledge_graphs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  path_id UUID REFERENCES learning_paths(id),
+  graph_data JSONB NOT NULL,         -- nx.node_link_data(G) output
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, path_id)
+);
+```
+
+`load_kg(user_id, path_id)` and `save_kg(G, user_id, path_id)` become async functions that read/write this table. The file fallback is used for local dev only.
+
+**Upload History**
+
+```sql
+CREATE TABLE documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  path_id UUID REFERENCES learning_paths(id),
+  filename TEXT NOT NULL,
+  file_size INTEGER,
+  chunk_count INTEGER,
+  concept_count INTEGER,
+  uploaded_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+New API: `GET /documents` — list user's uploaded files with metadata. Shown in sidebar history panel and profile page.
+
+**Streak Tracking**
+
+```sql
+CREATE TABLE user_activity (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  activity_date DATE NOT NULL,
+  actions INTEGER DEFAULT 1,         -- incremented per artifact interaction
+  UNIQUE(user_id, activity_date)
+);
+```
+
+Streak = consecutive days with `actions > 0`. Calculated in `GET /dashboard` response.
+
+**Dashboard API:**
+```
+GET /dashboard   → { current_streak, longest_streak, active_paths, recent_concepts, total_mastered }
+```
+
+---
+
+### Phase 10 — Profile + Polish
+
+**Profile Page (`/profile`)**
+
+- Google avatar + display name + email (read-only)
+- Preferences: formats, detail level, session length (editable → `PATCH /preferences`)
+- Upload history: list from `documents` table
+- Danger zone: delete account, reset all progress
+
+**UX polish:**
+- Smooth route transitions (framer-motion `AnimatePresence`)
+- Skeleton loaders for all data-fetching states
+- Toast notifications for mastery milestones ("Concepts unlocked!", "Path completed!")
+- Keyboard shortcuts: `K` → open command palette (search concepts)
+- Empty states with actionable CTAs (not just "nothing here")
+
+**Sign out** is an icon button in the sidebar footer — not a text link in page headers.
+
+---
+
+## Updated File Structure (Phase 6+)
+
+```
+frontend/
+├── app/
+│   ├── page.tsx                      # sign-in (unauthenticated shell)
+│   ├── (app)/
+│   │   ├── layout.tsx                # sidebar shell, auth guard
+│   │   ├── dashboard/
+│   │   │   └── page.tsx              # home: streak, recent paths, pick up where you left off
+│   │   ├── paths/
+│   │   │   ├── page.tsx              # paths library grid
+│   │   │   ├── new/
+│   │   │   │   └── page.tsx          # onboarding (goal → prefs → upload → processing)
+│   │   │   └── [pathId]/
+│   │   │       ├── page.tsx          # Udemy-style path detail
+│   │   │       └── [conceptId]/
+│   │   │           └── page.tsx      # concept deep-dive with artifacts
+│   │   ├── chat/
+│   │   │   ├── page.tsx              # recent chat sessions
+│   │   │   └── [sessionId]/
+│   │   │       └── page.tsx          # active chat thread
+│   │   └── profile/
+│   │       └── page.tsx
+│   └── onboarding/                   # → redirect to (app)/paths/new
+│       └── page.tsx
+├── components/
+│   ├── layout/
+│   │   ├── Sidebar.tsx               # collapsible nav sidebar
+│   │   ├── SidebarItem.tsx
+│   │   └── AppShell.tsx              # layout wrapper
+│   ├── dashboard/
+│   │   ├── StreakWidget.tsx
+│   │   ├── RecentPathCard.tsx
+│   │   └── MasteryOverview.tsx
+│   ├── paths/
+│   │   ├── PathCard.tsx              # grid card for paths library
+│   │   ├── ModuleTree.tsx            # left panel: sections/modules
+│   │   ├── ConceptRow.tsx            # row in module with state
+│   │   └── ConceptPanel.tsx          # right panel: artifact buttons + mastery
+│   ├── chat/
+│   │   ├── ChatThread.tsx
+│   │   ├── MessageBubble.tsx
+│   │   └── ChatInput.tsx
+│   ├── onboarding/                   # existing (keep)
+│   ├── learning-path/                # existing (repurposed for path detail)
+│   └── artifacts/                    # existing (keep)
+├── hooks/
+│   ├── useAuth.ts                    # existing
+│   ├── useProgress.ts                # existing
+│   ├── useArtifact.ts                # existing
+│   ├── usePaths.ts                   # NEW: list + CRUD learning paths
+│   ├── useChat.ts                    # NEW: chat sessions + streaming
+│   └── useDashboard.ts               # NEW: streak + overview
+└── lib/
+    ├── api-client.ts                 # extend with paths, chat, dashboard
+    └── types.ts                      # extend with LearningPath, ChatSession, etc.
+```
+
+```
+backend/
+├── app/
+│   ├── api/
+│   │   ├── routes.py                 # existing (extend with /paths, /dashboard)
+│   │   ├── auth_routes.py            # existing
+│   │   ├── chat_routes.py            # NEW: /chat/sessions CRUD + streaming
+│   │   └── deps.py
+│   ├── agent/
+│   │   ├── orchestrator.py           # existing
+│   │   ├── chat_agent.py             # NEW: conversational ReAct (no artifact output)
+│   │   └── ...
+│   ├── models/
+│   │   └── user.py                   # extend: LearningPath, ChatSession, ChatMessage, Document, UserActivity
+│   └── ...
+└── alembic/
+    └── versions/
+        ├── 0004_learning_paths.py
+        ├── 0005_chat.py
+        ├── 0006_documents_activity.py
+        └── 0007_knowledge_graphs_table.py
+```
+
+---
+
+## Current Development Status (as of Phase 5 complete)
+
+| Feature | Status |
+|---|---|
+| Google OAuth + JWT | ✅ Working |
+| Document ingest + ChromaDB | ✅ Working |
+| Concept extraction → KG | ✅ Working |
+| Artifact generation (cheatsheet/flashcards/quiz/diagram/audio) | ✅ Fixed (Gemini message format) |
+| Concept ordering + locking | 🔧 Bug: only `prerequisite` edges should lock; others are structural |
+| Learning path page | ✅ Working |
+| Onboarding 4-step flow | ✅ Working |
+| App shell + sidebar | ⬜ Phase 6 |
+| Dashboard + streak | ⬜ Phase 7 |
+| Paths library + Udemy detail | ⬜ Phase 7 |
+| Chat interface | ⬜ Phase 8 |
+| Postgres KG persistence | ⬜ Phase 9 |
+| Profile page | ⬜ Phase 10 |

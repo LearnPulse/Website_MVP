@@ -59,12 +59,10 @@ export interface ProgressResponse {
 // ── Onboarding ────────────────────────────────────────────────────────────
 
 export interface UserGoalIn {
-  user_id: string;
   goal_text: string;
 }
 
 export interface UserPreferencesIn {
-  user_id: string;
   preferred_formats: ArtifactFormat[];
   detail_level: "concise" | "detailed";
   session_length: "micro" | "standard" | "deep";
@@ -143,12 +141,33 @@ export interface AudioPayload {
   transcript: string;
 }
 
+// ── Knowledge Graph (visualization) ──────────────────────────────────────
+
+export interface KGNode {
+  id: string;
+  name: string;
+  description: string;
+  mastery_score: number;
+  source_id: string;
+}
+
+export interface KGEdge {
+  source: string;
+  target: string;
+  type: EdgeType;
+}
+
+export interface KGResponse {
+  nodes: KGNode[];
+  edges: KGEdge[];
+}
+
 // ── Mastery ───────────────────────────────────────────────────────────────
 
 export type MasterySource = "view" | "flashcard" | "quiz_pass" | "quiz_fail";
 
 export interface MasteryUpdateRequest {
-  user_id: string;
+  user_id?: string;
   concept_id: string;
   source: MasterySource;
 }

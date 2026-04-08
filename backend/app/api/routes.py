@@ -22,6 +22,41 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+# ── Knowledge Graph export ────────────────────────────────────────────────
+
+@router.get("/graph")
+async def get_graph(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Return the full knowledge graph with per-concept mastery scores for visualization."""
+    G = load_kg()
+
+    # Load mastery
+    result = await session.execute(
+        select(UserConcept).where(UserConcept.user_id == current_user.id)
+    )
+    mastery_rows = {str(r.concept_id): r.mastery_score for r in result.scalars().all()}
+
+    nodes = [
+        {
+            "id": nid,
+            "name": attrs.get("name", nid),
+            "description": attrs.get("description", ""),
+            "mastery_score": mastery_rows.get(nid, 0),
+            "source_id": attrs.get("source_id", ""),
+        }
+        for nid, attrs in G.nodes(data=True)
+    ]
+
+    edges = [
+        {"source": u, "target": v, "type": d.get("type", "related")}
+        for u, v, d in G.edges(data=True)
+    ]
+
+    return {"nodes": nodes, "edges": edges}
+
+
 # ── Ingest ────────────────────────────────────────────────────────────────
 
 @router.post("/ingest")
@@ -111,8 +146,12 @@ async def get_progress(
         node = all_nodes[cid]
         mastery = mastery_rows.get(cid, 0)
 
-        # Determine state
-        prereqs = list(G.predecessors(cid))
+        # Determine state — only "prerequisite" typed edges gate unlocking.
+        # "related", "part_of", "example_of" edges are structural and must not lock a concept.
+        prereqs = [
+            p for p in G.predecessors(cid)
+            if G.edges[p, cid].get("type") == "prerequisite"
+        ]
         prereqs_met = all(mastery_rows.get(p, 0) >= 50 for p in prereqs)
         if mastery >= 70:
             state = "done"

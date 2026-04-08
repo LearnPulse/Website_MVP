@@ -8,6 +8,7 @@ import type {
   MasteryUpdateRequest,
   UserPreferencesIn,
   UserGoalIn,
+  KGResponse,
   ApiResponse,
 } from "@/lib/types";
 
@@ -105,6 +106,11 @@ class APIClient {
   /** Fire after artifact interaction: view (+8), flashcard (+15), quiz_pass (+35), quiz_fail (+8). */
   async updateMastery(req: MasteryUpdateRequest): Promise<ApiResponse<void>> {
     return this.request("/mastery/update", { method: "POST", body: JSON.stringify(req) });
+  }
+
+  /** Get knowledge graph nodes + edges with mastery overlay for visualization. */
+  async getGraph(): Promise<ApiResponse<KGResponse>> {
+    return this.request<KGResponse>("/graph");
   }
 }
 
