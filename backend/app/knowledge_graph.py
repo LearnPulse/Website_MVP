@@ -26,7 +26,9 @@ def load_kg() -> nx.DiGraph:
     if not path.exists() or path.stat().st_size == 0:
         return nx.DiGraph()
     data = json.loads(path.read_text())
-    return nx.node_link_graph(data, directed=True, multigraph=False, edges="links")
+    # NetworkX 3.4+ uses "edges" as the default key (older files used "links")
+    edge_key = "edges" if "edges" in data else "links"
+    return nx.node_link_graph(data, directed=True, multigraph=False, edges=edge_key)
 
 
 def save_kg(G: nx.DiGraph) -> None:

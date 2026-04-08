@@ -28,7 +28,7 @@ export default function LearnPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
@@ -36,8 +36,8 @@ export default function LearnPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <p className="text-sm text-slate-500">{error}</p>
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center gap-4">
+        <p className="text-sm text-slate-400">{error}</p>
         <button type="button" onClick={refetch} className="text-xs text-primary hover:underline">
           Try again
         </button>
@@ -47,12 +47,12 @@ export default function LearnPage() {
 
   if (!data || data.concepts.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <p className="text-sm text-slate-500">No concepts yet. Upload documents to get started.</p>
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center gap-4">
+        <p className="text-sm text-slate-400">No concepts yet — upload documents to build your path.</p>
         <button
           type="button"
           onClick={() => router.push("/onboarding")}
-          className="px-4 py-2 rounded-lg bg-primary text-white text-sm"
+          className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium"
         >
           Upload documents
         </button>
@@ -61,49 +61,59 @@ export default function LearnPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark">
-      <div className="max-w-xl mx-auto px-4 py-10">
-        {/* Top bar */}
-        <div className="flex items-center justify-between mb-8">
-          <span className="text-primary font-semibold text-base tracking-tight">LearnPulse</span>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => router.push("/onboarding")}
-              className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
-            >
-              New path
-            </button>
-            <button
-              type="button"
-              onClick={logout}
-              className="text-xs text-slate-400 hover:text-slate-600"
-            >
-              Sign out
-            </button>
+    <div className="min-h-screen bg-slate-900 flex flex-col">
+      {/* Dark header zone */}
+      <div className="bg-slate-900 px-5 pt-10 pb-8 border-b border-slate-800">
+        <div className="max-w-lg mx-auto">
+          {/* Top bar */}
+          <div className="flex items-center justify-between mb-6">
+            <span className="text-primary font-bold text-base tracking-tight">LearnPulse</span>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => router.push("/onboarding")}
+                className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+              >
+                New path
+              </button>
+              <button
+                type="button"
+                onClick={logout}
+                className="text-xs text-slate-600 hover:text-slate-400 transition-colors"
+              >
+                Sign out
+              </button>
+            </div>
           </div>
+
+          {/* Goal + progress */}
+          <GoalHeader
+            goalText={data.goal_text}
+            masteredCount={data.mastered_count}
+            totalCount={data.total_count}
+          />
         </div>
+      </div>
 
-        {/* Goal + progress summary */}
-        <GoalHeader
-          goalText={data.goal_text}
-          masteredCount={data.mastered_count}
-          totalCount={data.total_count}
-        />
-
-        {/* Concept track */}
-        <div className="mt-8">
-          {data.concepts.map((concept, i) => (
-            <ConceptCard
-              key={concept.id}
-              concept={concept}
-              isLast={i === data.concepts.length - 1}
-              onArtifactRequest={(format: ArtifactFormat) =>
-                requestArtifact(concept.id, format)
-              }
-              onMasteryUpdate={(source) => handleMasteryUpdate(concept.id, source)}
-            />
-          ))}
+      {/* Concept track */}
+      <div className="flex-1 bg-slate-900/95 px-5 py-8">
+        <div className="max-w-lg mx-auto">
+          <p className="text-[10px] font-semibold tracking-widest uppercase text-slate-600 mb-6">
+            Learning Path
+          </p>
+          <div>
+            {data.concepts.map((concept, i) => (
+              <ConceptCard
+                key={concept.id}
+                concept={concept}
+                isLast={i === data.concepts.length - 1}
+                onArtifactRequest={(format: ArtifactFormat) =>
+                  requestArtifact(concept.id, format)
+                }
+                onMasteryUpdate={(source) => handleMasteryUpdate(concept.id, source)}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>

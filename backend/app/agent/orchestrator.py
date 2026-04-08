@@ -70,32 +70,36 @@ Generate thorough, accurate content grounded in the context above.
 """
 
 
-def _build_llm() -> ChatGoogleGenerativeAI:
-    return ChatGoogleGenerativeAI(
-        model=settings.gemini_chat_model,
-        google_api_key=settings.gemini_api_key,
-        temperature=0.3,
-    )
-
-
 # ── ReAct nodes ───────────────────────────────────────────────────────────
 
 def reason_node(state: OrchestratorState) -> dict:
     """Invoke the LLM with tool-binding for the ReAct loop."""
-    llm = _build_llm().bind_tools(TOOLS)
-    mastery = state.get("mastery_summary", {})
-    concept_mastery = mastery.get("mastery", {}).get(state["concept_id"], 0)
+    # convert_system_message_to_human=True merges SystemMessage content into the
+    # first HumanMessage so Gemini never sees a standalone SystemMessage turn,
+    # which would violate its function-call ordering constraint.
+    llm = ChatGoogleGenerativeAI(
+        model=settings.gemini_chat_model,
+        google_api_key=settings.gemini_api_key,
+        temperature=0.3,
+        convert_system_message_to_human=True,
+    ).bind_tools(TOOLS)
 
+    mastery = state.get("mastery_summary", {})
     system = SYSTEM_PROMPT.format(
         goal=state["goal"],
         mastery_summary=mastery,
         preferences=mastery.get("preferences", {}),
         query=state["query"],
     )
-    messages = state.get("messages", []) or [
-        SystemMessage(content=system),
-        HumanMessage(content=f"Help me learn: {state['query']}"),
-    ]
+
+    messages = state.get("messages", [])
+    if not messages:
+        # First call — seed with system context + user request
+        messages = [
+            SystemMessage(content=system),
+            HumanMessage(content=f"Help me learn: {state['query']}"),
+        ]
+
     response = llm.invoke(messages)
     return {"messages": [response]}
 
