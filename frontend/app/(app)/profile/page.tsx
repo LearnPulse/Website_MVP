@@ -5,12 +5,63 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiClient } from "@/lib/api-client";
 import type { ArtifactFormat } from "@/lib/types";
 
-const FORMAT_OPTIONS: { value: ArtifactFormat; label: string; icon: string }[] = [
-  { value: "cheatsheet", label: "Cheatsheet", icon: "📋" },
-  { value: "flashcards", label: "Flashcards", icon: "🃏" },
-  { value: "quiz",       label: "Quiz",       icon: "✏️" },
-  { value: "diagram",    label: "Diagram",    icon: "🗺️" },
-  { value: "audio",      label: "Audio",      icon: "🎧" },
+// ── Format icons ──────────────────────────────────────────────────────────────
+
+const FORMAT_OPTIONS: { value: ArtifactFormat; label: string; icon: React.ReactNode }[] = [
+  {
+    value: "cheatsheet",
+    label: "Cheatsheet",
+    icon: (
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.1"/>
+        <path d="M3 4.5h6M3 6.5h6M3 8.5h3.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
+    value: "flashcards",
+    label: "Flashcards",
+    icon: (
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <rect x="1" y="2.5" width="8" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.1"/>
+        <rect x="3" y="1" width="8" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.1" strokeDasharray="2 1"/>
+      </svg>
+    ),
+  },
+  {
+    value: "quiz",
+    label: "Quiz",
+    icon: (
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.1"/>
+        <path d="M4.5 4.8a1.5 1.5 0 012.5 1c0 .8-.7 1.1-1 1.4v.6" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+        <circle cx="6" cy="9" r=".5" fill="currentColor"/>
+      </svg>
+    ),
+  },
+  {
+    value: "diagram",
+    label: "Diagram",
+    icon: (
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <circle cx="6" cy="2.5" r="1.5" stroke="currentColor" strokeWidth="1.1"/>
+        <circle cx="2" cy="9.5" r="1.5" stroke="currentColor" strokeWidth="1.1"/>
+        <circle cx="10" cy="9.5" r="1.5" stroke="currentColor" strokeWidth="1.1"/>
+        <path d="M6 4v1L3.5 8M6 5l2.5 3" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
+    value: "audio",
+    label: "Audio",
+    icon: (
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <rect x="3.5" y="1" width="5" height="6.5" rx="2.5" stroke="currentColor" strokeWidth="1.1"/>
+        <path d="M1.5 7a4.5 4.5 0 009 0" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+        <path d="M6 10.5V12" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
 ];
 
 const DETAIL_OPTIONS = ["concise", "detailed"] as const;
@@ -20,6 +71,20 @@ const SESSION_OPTIONS: { value: "micro" | "standard" | "deep"; label: string; su
   { value: "deep", label: "Deep", sub: "1 hr+" },
 ];
 
+// ── Row divider ───────────────────────────────────────────────────────────────
+
+function Divider() {
+  return <div className="h-px bg-line my-5" />;
+}
+
+// ── Section label ─────────────────────────────────────────────────────────────
+
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-2xs font-semibold uppercase tracking-widest text-dim mb-3">{children}</p>
+  );
+}
+
 export default function ProfilePage() {
   const { session, logout } = useAuth();
   const [formats, setFormats] = useState<ArtifactFormat[]>(["cheatsheet"]);
@@ -28,9 +93,9 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const email = (session?.user?.email) ?? "";
-  const name = (session?.user?.name) ?? "";
-  const image = (session?.user?.image) ?? "";
+  const email = session?.user?.email ?? "";
+  const name = session?.user?.name ?? "";
+  const image = session?.user?.image ?? "";
 
   function toggleFormat(fmt: ArtifactFormat) {
     setFormats((prev) =>
@@ -52,57 +117,63 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="px-8 py-10 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-semibold text-slate-100 mb-8">Profile</h1>
+    <div className="min-h-full px-10 py-10 max-w-[600px]">
 
-      {/* Account info */}
-      <section className="rounded-xl border border-slate-700/60 bg-slate-800/20 p-6 mb-6">
-        <h2 className="text-xs font-semibold tracking-widest uppercase text-slate-500 mb-4">Account</h2>
+      <h1 className="text-2xl font-bold tracking-tight text-ink mb-10">Settings</h1>
+
+      {/* ── Account ── */}
+      <div className="mb-10">
+        <Label>Account</Label>
         <div className="flex items-center gap-4">
           {image ? (
-            <img src={image} alt={name} className="w-12 h-12 rounded-full" />
+            <img src={image} alt={name} width={40} height={40} className="w-10 h-10 rounded-full" />
           ) : (
-            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-lg">
-              {name?.[0] ?? "?"}
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold">
+              {name?.[0]?.toUpperCase() ?? "?"}
             </div>
           )}
           <div>
-            <p className="text-sm font-semibold text-slate-100">{name || "—"}</p>
-            <p className="text-xs text-slate-500">{email || "—"}</p>
-            <p className="text-[10px] text-slate-600 mt-0.5">Signed in with Google</p>
+            <p className="text-sm font-semibold text-ink">{name || "—"}</p>
+            <p className="text-xs text-dim">{email || "—"}</p>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Preferences */}
-      <section className="rounded-xl border border-slate-700/60 bg-slate-800/20 p-6 mb-6">
-        <h2 className="text-xs font-semibold tracking-widest uppercase text-slate-500 mb-5">Learning preferences</h2>
+      <Divider />
+
+      {/* ── Learning preferences ── */}
+      <div className="mb-10">
+        <Label>Learning preferences</Label>
 
         {/* Formats */}
-        <div className="mb-5">
-          <p className="text-xs text-slate-400 font-medium mb-3">Preferred formats</p>
+        <div className="mb-6">
+          <p className="text-xs font-medium text-ink mb-2.5">Preferred formats</p>
           <div className="flex flex-wrap gap-2">
-            {FORMAT_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => toggleFormat(opt.value)}
-                className={[
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
-                  formats.includes(opt.value)
-                    ? "bg-primary/10 text-primary border-primary/40"
-                    : "bg-slate-700/40 text-slate-400 border-slate-700 hover:border-slate-600",
-                ].join(" ")}
-              >
-                <span>{opt.icon}</span> {opt.label}
-              </button>
-            ))}
+            {FORMAT_OPTIONS.map((opt) => {
+              const active = formats.includes(opt.value);
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => toggleFormat(opt.value)}
+                  className={[
+                    "flex items-center gap-2 h-8 px-3 rounded border text-sm font-medium transition-all",
+                    active
+                      ? "bg-primary border-primary text-white"
+                      : "border-line text-dim hover:text-ink hover:border-ghost bg-surface",
+                  ].join(" ")}
+                >
+                  {opt.icon}
+                  {opt.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Detail level */}
-        <div className="mb-5">
-          <p className="text-xs text-slate-400 font-medium mb-3">Detail level</p>
+        <div className="mb-6">
+          <p className="text-xs font-medium text-ink mb-2.5">Detail level</p>
           <div className="flex gap-2">
             {DETAIL_OPTIONS.map((opt) => (
               <button
@@ -110,10 +181,10 @@ export default function ProfilePage() {
                 type="button"
                 onClick={() => { setDetail(opt); setSaved(false); }}
                 className={[
-                  "px-4 py-1.5 rounded-lg text-xs font-medium border transition-all capitalize",
+                  "h-8 px-4 rounded border text-sm font-medium transition-all capitalize",
                   detail === opt
-                    ? "bg-primary/10 text-primary border-primary/40"
-                    : "bg-slate-700/40 text-slate-400 border-slate-700 hover:border-slate-600",
+                    ? "bg-primary border-primary text-white"
+                    : "border-line text-dim hover:text-ink hover:border-ghost bg-surface",
                 ].join(" ")}
               >
                 {opt}
@@ -123,8 +194,8 @@ export default function ProfilePage() {
         </div>
 
         {/* Session length */}
-        <div className="mb-6">
-          <p className="text-xs text-slate-400 font-medium mb-3">Session length</p>
+        <div className="mb-7">
+          <p className="text-xs font-medium text-ink mb-2.5">Session length</p>
           <div className="flex gap-2">
             {SESSION_OPTIONS.map((opt) => (
               <button
@@ -132,14 +203,14 @@ export default function ProfilePage() {
                 type="button"
                 onClick={() => { setSessionLength(opt.value); setSaved(false); }}
                 className={[
-                  "flex flex-col items-center px-4 py-2 rounded-lg text-xs font-medium border transition-all",
+                  "flex flex-col items-center w-20 py-2 rounded border text-sm font-medium transition-all",
                   sessionLength === opt.value
-                    ? "bg-primary/10 text-primary border-primary/40"
-                    : "bg-slate-700/40 text-slate-400 border-slate-700 hover:border-slate-600",
+                    ? "bg-primary border-primary text-white"
+                    : "border-line text-dim hover:text-ink hover:border-ghost bg-surface",
                 ].join(" ")}
               >
                 <span>{opt.label}</span>
-                <span className="text-[10px] opacity-70">{opt.sub}</span>
+                <span className="text-2xs mt-0.5 opacity-70">{opt.sub}</span>
               </button>
             ))}
           </div>
@@ -149,29 +220,31 @@ export default function ProfilePage() {
           type="button"
           onClick={savePreferences}
           disabled={saving}
-          className="px-5 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+          className="h-8 px-4 rounded bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
-          {saving ? "Saving…" : saved ? "Saved ✓" : "Save preferences"}
+          {saving ? "Saving…" : saved ? "Saved" : "Save preferences"}
         </button>
-      </section>
+      </div>
 
-      {/* Danger zone */}
-      <section className="rounded-xl border border-red-900/30 bg-red-950/10 p-6">
-        <h2 className="text-xs font-semibold tracking-widest uppercase text-red-500/70 mb-4">Danger zone</h2>
+      <Divider />
+
+      {/* ── Sign out ── */}
+      <div>
+        <Label>Account actions</Label>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-slate-300 font-medium">Sign out</p>
-            <p className="text-xs text-slate-500">You will need to sign in again.</p>
+            <p className="text-sm font-medium text-ink">Sign out</p>
+            <p className="text-xs text-dim mt-0.5">You will need to sign in again to continue.</p>
           </div>
           <button
             type="button"
             onClick={logout}
-            className="px-4 py-2 rounded-lg border border-red-800/50 text-red-400 text-xs font-medium hover:bg-red-950/30 transition-colors"
+            className="h-8 px-3 rounded border border-line text-sm font-medium text-dim hover:text-ink hover:border-ghost transition-colors"
           >
             Sign out
           </button>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

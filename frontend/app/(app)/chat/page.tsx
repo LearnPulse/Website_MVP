@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { apiClient } from "@/lib/api-client";
 
 interface Message {
   id: string;
@@ -15,6 +14,11 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isLoading]);
 
   async function sendMessage() {
     const text = input.trim();
@@ -26,8 +30,6 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
-      // For now, use the /ask endpoint with a generic "cheatsheet" artifact as a proxy.
-      // Phase 8 will add a dedicated /chat endpoint with streaming.
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/chat`, {
         method: "POST",
         headers: {
@@ -37,7 +39,7 @@ export default function ChatPage() {
         body: JSON.stringify({ message: text, user_id: userId }),
       });
 
-      let reply = "Chat endpoint is coming soon! For now, explore your learning path to study concepts.";
+      let reply = "Chat endpoint is coming soon. Explore your learning path to study concepts.";
       if (res.ok) {
         const data = await res.json();
         reply = data.reply ?? reply;
@@ -53,7 +55,7 @@ export default function ChatPage() {
         {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: "Chat is being set up. Check back soon!",
+          content: "Could not reach the server. Check your connection.",
         },
       ]);
     } finally {
@@ -63,62 +65,82 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-screen">
+
       {/* Header */}
-      <div className="px-8 py-5 border-b border-slate-800 flex-shrink-0">
-        <h1 className="text-lg font-semibold text-slate-100">Chat</h1>
-        <p className="text-xs text-slate-500 mt-0.5">Ask anything about your learning materials</p>
+      <div className="px-8 py-5 border-b border-line flex-shrink-0">
+        <h1 className="text-base font-semibold text-ink">Chat</h1>
+        <p className="text-xs text-dim mt-0.5">Ask anything about your learning materials</p>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4">
+      <div className="flex-1 overflow-y-auto px-8 py-6">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-              <svg className="w-6 h-6 text-primary" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H6l-4 3V5z" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <p className="text-sm text-slate-400 font-medium">Ask about your concepts</p>
-            <p className="text-xs text-slate-600 max-w-sm">
+            {/* Chat icon */}
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="text-dim mb-1">
+              <path
+                d="M4 6a2 2 0 012-2h16a2 2 0 012 2v12a2 2 0 01-2 2H8l-4 4V6z"
+                stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"
+              />
+            </svg>
+            <p className="text-sm font-semibold text-ink">Ask about your concepts</p>
+            <p className="text-xs text-dim max-w-xs">
               Type a question and LearnPulse will search your uploaded materials to answer it.
             </p>
           </div>
         )}
 
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-          >
+        <div className="space-y-5 max-w-2xl mx-auto">
+          {messages.map((msg) => (
             <div
-              className={[
-                "max-w-xl px-4 py-3 rounded-2xl text-sm leading-relaxed",
-                msg.role === "user"
-                  ? "bg-primary text-white rounded-br-sm"
-                  : "bg-slate-800 text-slate-200 border border-slate-700/60 rounded-bl-sm",
-              ].join(" ")}
+              key={msg.id}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              {msg.content}
-            </div>
-          </div>
-        ))}
-
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-slate-800 border border-slate-700/60 rounded-2xl rounded-bl-sm px-4 py-3">
-              <div className="flex gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-bounce" style={{ animationDelay: "300ms" }} />
+              {msg.role === "assistant" && (
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center mr-2.5 mt-0.5">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="text-primary">
+                    <circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1.2"/>
+                    <path d="M3 5h4M5 3v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                </div>
+              )}
+              <div
+                className={[
+                  "max-w-md px-4 py-2.5 text-sm leading-relaxed",
+                  msg.role === "user"
+                    ? "bg-primary text-white rounded-md rounded-br-sm"
+                    : "bg-surface border border-line text-ink rounded-md rounded-bl-sm",
+                ].join(" ")}
+              >
+                {msg.content}
               </div>
             </div>
-          </div>
-        )}
+          ))}
+
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center mr-2.5 mt-0.5">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="text-primary">
+                  <circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1.2"/>
+                  <path d="M3 5h4M5 3v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <div className="bg-surface border border-line rounded-md rounded-bl-sm px-4 py-3">
+                <div className="flex gap-1 items-center">
+                  <span className="w-1.5 h-1.5 rounded-full bg-dim animate-bounce [animation-delay:0ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-dim animate-bounce [animation-delay:150ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-dim animate-bounce [animation-delay:300ms]" />
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
       </div>
 
       {/* Input */}
-      <div className="px-8 py-5 border-t border-slate-800 flex-shrink-0">
-        <div className="flex items-end gap-3 max-w-2xl mx-auto">
+      <div className="px-8 py-4 border-t border-line flex-shrink-0">
+        <div className="flex items-end gap-2 max-w-2xl mx-auto">
           <textarea
             rows={1}
             value={input}
@@ -129,23 +151,22 @@ export default function ChatPage() {
                 sendMessage();
               }
             }}
-            placeholder="Ask a question about your learning materials..."
-            className="flex-1 resize-none bg-slate-800/60 border border-slate-700 text-slate-100 placeholder-slate-500 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary/50 transition-colors min-h-[48px] max-h-[160px]"
+            placeholder="Ask a question…"
+            className="flex-1 resize-none bg-surface border border-line text-ink placeholder:text-dim rounded-md px-3 py-2.5 text-sm focus:outline-none focus:border-ghost transition-colors min-h-[40px] max-h-[140px]"
           />
           <button
             type="button"
             onClick={sendMessage}
             disabled={!input.trim() || isLoading}
-            className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+            title="Send message"
+            className="w-9 h-9 rounded-md bg-primary text-white flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
           >
-            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
-              <path d="M14 8L2 3l3 5-3 5 12-5z" fill="currentColor" />
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M12.5 7L1.5 2.5l2.5 4.5-2.5 4.5L12.5 7z" fill="currentColor"/>
             </svg>
           </button>
         </div>
-        <p className="text-center text-[10px] text-slate-600 mt-2">
-          Enter to send · Shift+Enter for new line
-        </p>
+        <p className="text-center text-2xs text-dim mt-2">Enter to send · Shift+Enter for new line</p>
       </div>
     </div>
   );
