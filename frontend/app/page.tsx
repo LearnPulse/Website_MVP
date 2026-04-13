@@ -10,13 +10,12 @@ export default function RootPage() {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (isLoading) return;
-    if (!isAuthenticated) return;
-    const token = getStoredToken();
-    if (!token) return;
-    router.replace("/dashboard");
-  }, [isAuthenticated, isLoading, router]);
+  
+// useEffect(() => {
+//   if (status === "authenticated") {
+//     router.replace("/dashboard");
+//   }
+// }, [status, router]);
 
   if (status === "loading" || isLoading) {
     return (
