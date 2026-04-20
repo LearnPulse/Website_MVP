@@ -51,16 +51,14 @@ class APIClient {
 
   // ── Auth ──────────────────────────────────────────────────────────────────
 
-  /** Exchange a Google ID token for a backend JWT. Called once after OAuth sign-in. */
-  async googleAuth(idToken: string): Promise<GoogleAuthResponse> {
-    const res = await fetch(`${this.baseUrl}/auth/google`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id_token: idToken }),
-    });
-    if (!res.ok) throw new Error(`Auth failed: ${res.statusText}`);
-    return res.json();
-  }
+/** Exchange a Google ID token for a backend JWT. Called once after OAuth sign-in. */
+async googleAuth(idToken: string): Promise<GoogleAuthResponse> {
+  // 🔥 TEMP MOCK FOR DEMO
+  return {
+    access_token: "demo-token",
+    token_type: "bearer",
+  } as any;
+}
 
   // ── Onboarding ────────────────────────────────────────────────────────────
 

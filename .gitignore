@@ -45,3 +45,4 @@ backend/alembic/versions/*.pyc
 # Coverage
 .coverage
 htmlcov/
+node_modules/
