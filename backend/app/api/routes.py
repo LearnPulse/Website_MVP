@@ -466,12 +466,20 @@ async def text_to_speech(
     try:
         from google.cloud import texttospeech
         from google.oauth2 import service_account
+        from pathlib import Path
 
-        credentials = service_account.Credentials.from_service_account_file(
-            settings.google_tts_key_path,
-            scopes=["https://www.googleapis.com/auth/cloud-platform"],
-        )
-        client = texttospeech.TextToSpeechClient(credentials=credentials)
+        # Prefer an explicit service-account JSON when running locally.
+        # In production (e.g. Cloud Run), it's better to use the runtime service
+        # account via Application Default Credentials (no JSON file needed).
+        key_path = Path(settings.google_tts_key_path) if settings.google_tts_key_path else None
+        if key_path and key_path.exists():
+            credentials = service_account.Credentials.from_service_account_file(
+                str(key_path),
+                scopes=["https://www.googleapis.com/auth/cloud-platform"],
+            )
+            client = texttospeech.TextToSpeechClient(credentials=credentials)
+        else:
+            client = texttospeech.TextToSpeechClient()
 
         synthesis_input = texttospeech.SynthesisInput(text=payload.text[:4500])
         voice = texttospeech.VoiceSelectionParams(
@@ -485,7 +493,8 @@ async def text_to_speech(
         response = client.synthesize_speech(
             input=synthesis_input, voice=voice, audio_config=audio_config
         )
-        return Response(content=response.audio_content, media_type="audio/mpeg")
+        headers = {"Content-Disposition": 'attachment; filename="learnpulse.mp3"'}
+        return Response(content=response.audio_content, media_type="audio/mpeg", headers=headers)
     except Exception as exc:
         logger.error("TTS synthesis failed: %s", exc)
         raise HTTPException(status_code=500, detail="TTS synthesis failed")

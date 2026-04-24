@@ -9,6 +9,7 @@ export default function Audio({ payload }: { payload: AudioPayload }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [voice, setVoice] = useState<string>("en-US-Journey-F");
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -28,7 +29,7 @@ export default function Audio({ payload }: { payload: AudioPayload }) {
     if (!payload.transcript) return;
     setLoading(true);
     setError(null);
-    const url = await apiClient.synthesizeSpeech(payload.transcript);
+    const url = await apiClient.synthesizeSpeech(payload.transcript, voice);
     setLoading(false);
     if (!url) { setError("Failed to generate audio. Please try again."); return; }
     setAudioUrl(url);
@@ -64,6 +65,36 @@ export default function Audio({ payload }: { payload: AudioPayload }) {
     <div className="flex flex-col gap-4">
       {/* Player */}
       <div className="flex flex-col gap-3 px-4 py-4 rounded-xl border border-line bg-surface">
+        {/* Voice selection */}
+        <div className="flex items-center justify-between gap-3">
+          <label className="text-xs text-dim flex items-center gap-2">
+            <span className="uppercase tracking-widest font-semibold">Voice</span>
+            <select
+              className="h-8 px-2 rounded-lg bg-transparent border border-line text-xs text-ink"
+              value={voice}
+              onChange={(e) => setVoice(e.target.value)}
+              disabled={loading}
+            >
+              <option value="en-US-Journey-F">en-US-Journey-F (default)</option>
+              <option value="en-US-Journey-D">en-US-Journey-D</option>
+              <option value="en-US-Journey-O">en-US-Journey-O</option>
+              <option value="en-US-Neural2-F">en-US-Neural2-F</option>
+              <option value="en-US-Neural2-D">en-US-Neural2-D</option>
+            </select>
+          </label>
+
+          {audioUrl && (
+            <a
+              href={audioUrl}
+              download="learnpulse.mp3"
+              className="h-8 px-3 rounded-lg border border-line text-xs text-dim hover:text-ink hover:border-dim/40 transition-all flex items-center"
+              title="Download MP3"
+            >
+              Download
+            </a>
+          )}
+        </div>
+
         {!audioUrl ? (
           <div className="flex items-center gap-3">
             <button
