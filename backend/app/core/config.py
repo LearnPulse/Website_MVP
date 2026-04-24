@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field(default="HS256")
     jwt_expire_minutes: int = Field(default=60 * 24 * 7)  # 7 days
     google_client_id: str = Field(default="")  # for server-side ID token validation
+    google_tts_key_path: str = Field(default="backend/secrets/learn-pulse-494314-6784d7d6e9a5.json")
     database_ssl: bool = Field(default=False)  # set True for Neon / Cloud SQL
 
     class Config:
@@ -46,3 +47,4 @@ settings = Settings()
 settings.chroma_dir = _resolve_path(settings.chroma_dir)
 settings.kg_path = _resolve_path(settings.kg_path)
 settings.upload_dir = _resolve_path(settings.upload_dir)
+settings.google_tts_key_path = _resolve_path(settings.google_tts_key_path)

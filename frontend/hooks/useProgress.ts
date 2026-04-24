@@ -9,9 +9,9 @@ export function useProgress(userId: string | null, goalId?: string) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetch = useCallback(async () => {
+  const fetch = useCallback(async (silent = false) => {
     if (!userId) return;
-    setIsLoading(true);
+    if (!silent) setIsLoading(true);
     setError(null);
     const res = await apiClient.getProgress(userId, goalId);
     if (res.success && res.data) {
@@ -19,10 +19,10 @@ export function useProgress(userId: string | null, goalId?: string) {
     } else {
       setError(res.error ?? "Failed to load progress");
     }
-    setIsLoading(false);
+    if (!silent) setIsLoading(false);
   }, [userId, goalId]);
 
   useEffect(() => { fetch(); }, [fetch]);
 
-  return { data, isLoading, error, refetch: fetch };
+  return { data, isLoading, error, refetch: fetch, silentRefetch: () => fetch(true) };
 }

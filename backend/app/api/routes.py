@@ -4,6 +4,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -447,3 +448,44 @@ async def chat(
         reply = "Something went wrong. Please try again in a moment."
 
     return {"reply": reply}
+
+
+# ── Text-to-Speech ────────────────────────────────────────────────────────────
+
+class TTSRequest(BaseModel):
+    text: str
+    voice: str = "en-US-Journey-F"  # natural, conversational voice
+
+
+@router.post("/tts")
+async def text_to_speech(
+    payload: TTSRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Synthesize text to MP3 using Google Cloud TTS. Returns raw audio/mpeg bytes."""
+    try:
+        from google.cloud import texttospeech
+        from google.oauth2 import service_account
+
+        credentials = service_account.Credentials.from_service_account_file(
+            settings.google_tts_key_path,
+            scopes=["https://www.googleapis.com/auth/cloud-platform"],
+        )
+        client = texttospeech.TextToSpeechClient(credentials=credentials)
+
+        synthesis_input = texttospeech.SynthesisInput(text=payload.text[:4500])
+        voice = texttospeech.VoiceSelectionParams(
+            language_code="en-US",
+            name=payload.voice,
+        )
+        audio_config = texttospeech.AudioConfig(
+            audio_encoding=texttospeech.AudioEncoding.MP3,
+            speaking_rate=0.95,
+        )
+        response = client.synthesize_speech(
+            input=synthesis_input, voice=voice, audio_config=audio_config
+        )
+        return Response(content=response.audio_content, media_type="audio/mpeg")
+    except Exception as exc:
+        logger.error("TTS synthesis failed: %s", exc)
+        raise HTTPException(status_code=500, detail="TTS synthesis failed")

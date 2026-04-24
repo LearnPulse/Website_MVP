@@ -296,7 +296,7 @@ export default function CurrentPathPage() {
   const { userId } = useAuth();
   const searchParams = useSearchParams();
   const goalId = searchParams.get("goal_id") ?? undefined;
-  const { data, isLoading, error, refetch } = useProgress(userId, goalId);
+  const { data, isLoading, error, refetch, silentRefetch } = useProgress(userId, goalId);
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -415,7 +415,7 @@ export default function CurrentPathPage() {
             concept={selected}
             goalText={data.goal_text}
             userId={userId}
-            onMasteryUpdate={refetch}
+            onMasteryUpdate={silentRefetch}
           />
         )}
       </div>

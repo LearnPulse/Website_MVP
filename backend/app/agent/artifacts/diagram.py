@@ -74,8 +74,11 @@ def generate_diagram(concept: dict, context: str) -> dict:
         context=context[:2000],
     )
     data = groq_json(prompt, temperature=0.2)
-    if not data:
-        logger.warning("Diagram generation returned empty for concept %s", concept.get("name"))
+    logger.info("Diagram raw keys: %s", list(data.keys()) if data else "empty")
+    nodes = data.get("nodes", [])
+    edges = data.get("edges", [])
+    if not nodes:
+        logger.warning("Diagram: no nodes for concept %s — raw: %s", concept.get("name"), str(data)[:200])
         return {"type": "diagram", "svg": ""}
-    svg = _build_svg(data.get("nodes", []), data.get("edges", []))
+    svg = _build_svg(nodes, edges)
     return {"type": "diagram", "svg": svg}

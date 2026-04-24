@@ -130,6 +130,22 @@ class APIClient {
   async getStats(): Promise<ApiResponse<{ total_xp: number; coins: number; mastered_count: number; reviewed_count: number }>> {
     return this.request("/stats");
   }
+
+  /** Synthesize text to MP3 via Google TTS. Returns an object URL you can pass to <audio>. */
+  async synthesizeSpeech(text: string, voice?: string): Promise<string | null> {
+    try {
+      const response = await fetch(`${this.baseUrl}/tts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...this.authHeaders() },
+        body: JSON.stringify({ text, voice }),
+      });
+      if (!response.ok) return null;
+      const blob = await response.blob();
+      return URL.createObjectURL(blob);
+    } catch {
+      return null;
+    }
+  }
 }
 
 export const apiClient = new APIClient();

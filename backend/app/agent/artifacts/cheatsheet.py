@@ -31,6 +31,8 @@ def generate_cheatsheet(concept: dict, context: str) -> dict:
         context=context[:3000],
     )
     data = groq_json(prompt, temperature=0.3)
-    if not data:
-        logger.warning("Cheatsheet generation returned empty for concept %s", concept.get("name"))
-    return {"type": "cheatsheet", "entries": data.get("entries", [])}
+    logger.info("Cheatsheet raw keys: %s", list(data.keys()) if data else "empty")
+    entries = data.get("entries", [])
+    if not entries:
+        logger.warning("Cheatsheet: no entries for concept %s — raw: %s", concept.get("name"), str(data)[:200])
+    return {"type": "cheatsheet", "entries": entries}

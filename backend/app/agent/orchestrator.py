@@ -64,10 +64,10 @@ async def run_orchestrator(
     generate_fn = _ARTIFACT_FNS.get(artifact_type, generate_cheatsheet)
     payload = generate_fn(concept, context)
 
-    logger.info(
-        "Artifact generated: type=%s concept=%s chunks=%d",
-        artifact_type, concept_id, len(chunk_ids),
-    )
+    # Log payload summary (exclude large svg/transcript from log)
+    summary = {k: (len(v) if isinstance(v, (list, str)) else v) for k, v in payload.items()}
+    logger.info("Artifact generated: type=%s concept=%s chunks=%d payload_summary=%s",
+                artifact_type, concept_id, len(chunk_ids), summary)
 
     return {
         "artifact_type": artifact_type,

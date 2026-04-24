@@ -26,6 +26,9 @@ venv/
 # Backend env
 backend/.env
 
+# Backend secrets (keep credentials out of git)
+backend/secrets/
+
 # DB / data
 *.sqlite
 *.db
@@ -45,3 +48,7 @@ backend/alembic/versions/*.pyc
 # Coverage
 .coverage
 htmlcov/
+
+# Secrets
+backend/secrets/
+backend/secrets/*.json

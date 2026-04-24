@@ -15,4 +15,5 @@ langgraph>=0.2
 langchain-google-genai>=2.0
 langchain-core>=0.3
 google-auth>=2.0
+google-cloud-texttospeech>=2.16
 python-jose[cryptography]>=3.3
