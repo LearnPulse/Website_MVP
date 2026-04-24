@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useStats } from "@/hooks/useStats";
 
 const NAV = [
   {
@@ -52,7 +54,13 @@ const NAV = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { userId, logout } = useAuth();
+  const { stats } = useStats(userId);
+  const xpBarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (stats) xpBarRef.current?.style.setProperty("--xp-pct", `${Math.min(100, stats.total_xp % 100)}%`);
+  }, [stats]);
 
   function active(href: string, exact?: boolean) {
     return exact ? pathname === href : pathname.startsWith(href);
@@ -61,10 +69,33 @@ export default function Sidebar() {
   return (
     <aside className="flex flex-col w-[248px] min-w-[248px] h-screen bg-canvas border-r border-line sticky top-0">
 
-      {/* Wordmark */}
-      <div className="px-5 pt-6 pb-5">
+      {/* Wordmark + XP badge */}
+      <div className="px-5 pt-6 pb-5 flex items-center justify-between">
         <span className="text-ink font-semibold text-base tracking-[-0.02em]">LearnPulse</span>
+        {stats && (
+          <div className="flex items-center gap-1 h-6 px-2.5 rounded-full bg-amber-400/15 border border-amber-400/30" title={`${stats.total_xp} XP`}>
+            <span className="text-xs">🪙</span>
+            <span className="text-xs font-semibold text-amber-500 tabular">{stats.coins}</span>
+          </div>
+        )}
       </div>
+
+      {/* XP bar */}
+      {stats && (
+        <div className="px-5 pb-4">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-dim">XP</span>
+            <span className="text-[10px] tabular text-dim">{stats.total_xp}</span>
+          </div>
+          <div className="h-1 bg-line rounded-full overflow-hidden">
+            <div
+              ref={xpBarRef}
+              className="h-full bg-amber-400 rounded-full transition-all duration-500 [width:var(--xp-pct,0%)]"
+            />
+          </div>
+          <p className="text-[10px] text-dim mt-1">{100 - (stats.total_xp % 100)} XP to next coin</p>
+        </div>
+      )}
 
       {/* Nav */}
       <nav className="flex-1 px-3 space-y-0.5">

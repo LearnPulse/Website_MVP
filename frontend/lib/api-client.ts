@@ -125,6 +125,11 @@ class APIClient {
   async getGraph(): Promise<ApiResponse<KGResponse>> {
     return this.request<KGResponse>("/graph");
   }
+
+  /** Get gamification stats: XP, coins, mastered count. */
+  async getStats(): Promise<ApiResponse<{ total_xp: number; coins: number; mastered_count: number; reviewed_count: number }>> {
+    return this.request("/stats");
+  }
 }
 
 export const apiClient = new APIClient();

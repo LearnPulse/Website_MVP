@@ -17,7 +17,6 @@ from app.knowledge_graph import get_concept, get_all_concepts, get_ordered_conce
 from app.models.user import User, UserConcept, UserGoal, UserPreferences
 from app.agent.orchestrator import run_orchestrator
 from app.rag.ingest import ingest_document
-from app.tools.user_state import set_db_context
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -89,16 +88,17 @@ async def ask(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    loop = asyncio.get_event_loop()
-    set_db_context(session, loop)
-
-    result = await run_orchestrator(
-        user_id=str(current_user.id),
-        concept_id=payload.concept_id,
-        goal=payload.goal,
-        artifact_type=payload.artifact_type,
-    )
-    return result
+    try:
+        result = await run_orchestrator(
+            user_id=str(current_user.id),
+            concept_id=payload.concept_id,
+            goal=payload.goal,
+            artifact_type=payload.artifact_type,
+        )
+        return result
+    except Exception as exc:
+        logger.error("Orchestrator failed: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 # ── Progress ──────────────────────────────────────────────────────────────
@@ -370,6 +370,44 @@ async def save_preferences(
     await session.execute(stmt)
     await session.commit()
     return {"status": "ok"}
+
+
+# ── Stats ─────────────────────────────────────────────────────────────────
+
+@router.get("/stats")
+async def get_stats(
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Return gamification stats: total XP, coins, streak, concepts mastered."""
+    from sqlalchemy import func as sqlfunc
+    xp_result = await session.execute(
+        select(sqlfunc.sum(UserConcept.mastery_score)).where(UserConcept.user_id == current_user.id)
+    )
+    total_xp = int(xp_result.scalar() or 0)
+
+    mastered_result = await session.execute(
+        select(sqlfunc.count()).select_from(UserConcept).where(
+            UserConcept.user_id == current_user.id,
+            UserConcept.mastery_score >= 70,
+        )
+    )
+    mastered_count = int(mastered_result.scalar() or 0)
+
+    reviewed_result = await session.execute(
+        select(sqlfunc.count()).select_from(UserConcept).where(
+            UserConcept.user_id == current_user.id,
+            UserConcept.review_count > 0,
+        )
+    )
+    reviewed_count = int(reviewed_result.scalar() or 0)
+
+    return {
+        "total_xp": total_xp,
+        "coins": total_xp // 10,
+        "mastered_count": mastered_count,
+        "reviewed_count": reviewed_count,
+    }
 
 
 # ── Chat ──────────────────────────────────────────────────────────────────

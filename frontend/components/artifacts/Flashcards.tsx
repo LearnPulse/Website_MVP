@@ -8,10 +8,10 @@ export default function Flashcards({ payload, onComplete }: { payload: Flashcard
   const [flipped, setFlipped] = useState(false);
   const [done, setDone] = useState(false);
 
-  if (!payload.cards?.length) return <p className="text-sm text-slate-400">No cards generated.</p>;
+  if (!payload.cards?.length) return <p className="text-sm text-dim">No cards generated.</p>;
   const card = payload.cards[idx];
 
-  function next(knew: boolean) {
+  function next() {
     setFlipped(false);
     if (idx + 1 >= payload.cards.length) {
       setDone(true);
@@ -23,46 +23,80 @@ export default function Flashcards({ payload, onComplete }: { payload: Flashcard
 
   if (done) {
     return (
-      <div className="flex flex-col items-center gap-3 py-6">
-        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Deck complete! +15 mastery</p>
-        <button type="button" onClick={() => { setIdx(0); setFlipped(false); setDone(false); }}
-          className="text-xs text-primary hover:underline">Restart deck</button>
+      <div className="flex flex-col items-center gap-4 py-8 text-center">
+        <div className="w-12 h-12 rounded-2xl bg-primary/12 flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-primary">
+            <path d="M4 10l4 4 8-8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-ink">Deck complete!</p>
+          <p className="text-xs text-dim mt-0.5">+15 mastery added</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => { setIdx(0); setFlipped(false); setDone(false); }}
+          className="h-8 px-4 rounded-xl border border-line text-xs text-dim hover:text-ink hover:border-dim/40 transition-all"
+        >
+          Restart deck
+        </button>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-between text-xs text-slate-400">
-        <span>{idx + 1} / {payload.cards.length}</span>
+      {/* Progress */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-dim">{idx + 1} / {payload.cards.length}</span>
         <div className="flex gap-1">
           {payload.cards.map((_, i) => (
-            <div key={i} className={`w-1.5 h-1.5 rounded-full ${i <= idx ? "bg-primary" : "bg-slate-200 dark:bg-slate-700"}`} />
+            <div
+              key={i}
+              className={`h-1 rounded-full transition-all duration-300 ${i <= idx ? "bg-primary w-4" : "bg-line w-2"}`}
+            />
           ))}
         </div>
       </div>
 
+      {/* Card */}
       <button
         type="button"
         onClick={() => setFlipped((f) => !f)}
-        className="min-h-[120px] w-full rounded-lg border-[0.5px] border-slate-200 dark:border-slate-700 p-5 text-left transition-colors hover:border-primary"
+        className="min-h-[140px] w-full rounded-2xl border border-line bg-surface p-6 text-left hover:border-primary/40 transition-all duration-150 group"
       >
-        <p className="text-xs text-slate-400 mb-2">{flipped ? "Answer" : "Question"}</p>
-        <p className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed">
+        <p className="text-xs font-semibold uppercase tracking-widest text-dim mb-3">
+          {flipped ? "Answer" : "Question — tap to reveal"}
+        </p>
+        <p className="text-sm text-ink leading-relaxed">
           {flipped ? card.back : card.front}
         </p>
-        {!flipped && <p className="text-xs text-slate-400 mt-3">Tap to reveal</p>}
+        {!flipped && (
+          <div className="mt-4 flex items-center gap-1.5 text-dim group-hover:text-primary transition-colors">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+            <span className="text-xs">Tap to flip</span>
+          </div>
+        )}
       </button>
 
+      {/* Actions — only shown when flipped */}
       {flipped && (
         <div className="flex gap-2">
-          <button type="button" onClick={() => next(false)}
-            className="flex-1 py-2 rounded-lg border-[0.5px] border-slate-200 dark:border-slate-700 text-sm text-slate-600 hover:border-red-400 hover:text-red-500 transition-colors">
+          <button
+            type="button"
+            onClick={next}
+            className="flex-1 h-10 rounded-xl border border-line text-sm text-dim hover:border-red-400/60 hover:text-red-500 transition-all"
+          >
             Review again
           </button>
-          <button type="button" onClick={() => next(true)}
-            className="flex-1 py-2 rounded-lg border-[0.5px] border-primary bg-primary/5 text-primary text-sm hover:bg-primary/10 transition-colors">
-            Got it
+          <button
+            type="button"
+            onClick={next}
+            className="flex-1 h-10 rounded-xl border border-primary bg-primary/8 text-primary text-sm font-medium hover:bg-primary/15 transition-all"
+          >
+            Got it ✓
           </button>
         </div>
       )}

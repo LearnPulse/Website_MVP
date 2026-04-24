@@ -4,6 +4,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useProgress } from "@/hooks/useProgress";
+import { useStats } from "@/hooks/useStats";
 import { apiClient } from "@/lib/api-client";
 import type { GoalSummary } from "@/lib/types";
 
@@ -102,6 +103,7 @@ export default function DashboardPage() {
   const [goals, setGoals] = useState<GoalSummary[]>([]);
   const [activeGoalId, setActiveGoalId] = useState<string | undefined>(undefined);
   const { data, isLoading } = useProgress(userId, activeGoalId);
+  const { stats } = useStats(userId);
   const [streak, setStreak] = useState(0);
   const [showToast, setShowToast] = useState(false);
 
@@ -222,10 +224,19 @@ export default function DashboardPage() {
           </div>
 
           {/* Stats */}
-          <div className="flex gap-3 mb-12 pb-10 border-b border-line">
+          <div className="flex gap-3 mb-12 pb-10 border-b border-line flex-wrap">
             <StatCard value={data.mastered_count} label="Mastered" accent />
             <StatCard value={data.total_count - data.mastered_count} label="Remaining" />
-            <StatCard value={data.total_count} label="Total concepts" />
+            {stats && <StatCard value={stats.total_xp} label="Total XP" />}
+            {stats && (
+              <div className="flex-1 min-w-0 p-5 rounded-2xl border bg-amber-400/8 border-amber-400/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-2xl">🪙</span>
+                  <p className="tabular text-4xl font-bold tracking-tight text-amber-500">{stats.coins}</p>
+                </div>
+                <p className="text-sm text-dim">Coins earned</p>
+              </div>
+            )}
             {streak > 0 && <StatCard value={streak} label="Day streak" />}
           </div>
 

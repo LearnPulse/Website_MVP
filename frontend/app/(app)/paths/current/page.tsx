@@ -107,6 +107,8 @@ function StateBadge({ state }: { state: ConceptProgress["state"] }) {
   );
 }
 
+const XP_AMOUNTS: Record<string, number> = { view: 8, flashcard: 15, quiz_pass: 35, quiz_fail: 8 };
+
 // ── Concept panel ───────────────────────────────────────────────────────────
 
 function ConceptPanel({
@@ -121,10 +123,24 @@ function ConceptPanel({
   const [loadingFormat, setLoadingFormat] = useState<ArtifactFormat | null>(null);
   const [activeArtifact, setActiveArtifact] = useState<{ format: ArtifactFormat; payload: ArtifactPayload } | null>(null);
   const [artifactError, setArtifactError] = useState<string | null>(null);
+  const artifactRef = useRef<HTMLDivElement>(null);
+  const perConceptCache = useRef<Map<string, { format: ArtifactFormat; payload: ArtifactPayload }>>(new Map());
+  const [xpToast, setXpToast] = useState<{ amount: number; key: number } | null>(null);
   const locked = concept.state === "locked";
 
-  // Reset error when concept changes
-  useEffect(() => { setArtifactError(null); setActiveArtifact(null); }, [concept.id]);
+  useEffect(() => {
+    setArtifactError(null);
+    setActiveArtifact(perConceptCache.current.get(concept.id) ?? null);
+  }, [concept.id]);
+
+  async function markMastery(source: "view" | "flashcard" | "quiz_pass" | "quiz_fail") {
+    if (!userId) return;
+    await apiClient.updateMastery({ concept_id: concept.id, source });
+    onMasteryUpdate();
+    const amount = XP_AMOUNTS[source];
+    setXpToast({ amount, key: Date.now() });
+    setTimeout(() => setXpToast(null), 2000);
+  }
 
   async function handleArtifact(fmt: ArtifactFormat) {
     if (loadingFormat || locked) return;
@@ -133,14 +149,14 @@ function ConceptPanel({
     setArtifactError(null);
     try {
       const payload = await requestArtifact(concept.id, fmt);
-      if (!payload) {
-        setArtifactError("Generation failed — please try again.");
-        return;
-      }
-      setActiveArtifact({ format: fmt, payload });
-      if (userId) {
-        await apiClient.updateMastery({ concept_id: concept.id, source: "view" });
-        onMasteryUpdate();
+      if (!payload) { setArtifactError("Generation failed — please try again."); return; }
+      const artifact = { format: fmt, payload };
+      setActiveArtifact(artifact);
+      perConceptCache.current.set(concept.id, artifact);
+      setTimeout(() => artifactRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+      // Passive formats get mastery credit just for opening them
+      if (fmt === "cheatsheet" || fmt === "diagram" || fmt === "audio") {
+        await markMastery("view");
       }
     } catch (err) {
       console.error("Artifact request error:", err);
@@ -182,11 +198,22 @@ function ConceptPanel({
         </div>
       ) : (
         <>
+          {/* XP toast */}
+          {xpToast && (
+            <div
+              key={xpToast.key}
+              className="fixed top-6 right-6 z-50 flex items-center gap-2 h-10 px-4 rounded-2xl bg-amber-400 text-white text-sm font-bold shadow-lg animate-slide-up pointer-events-none"
+            >
+              <span>🪙</span>
+              +{xpToast.amount} XP
+            </div>
+          )}
+
           {/* Format buttons */}
           <div className="mb-6">
             <p className="text-xs font-semibold uppercase tracking-widest text-dim mb-3">Study with</p>
             <div className="flex flex-wrap gap-2">
-              {concept.preferred_formats.map((fmt) => {
+              {(Object.keys(FORMAT_META) as ArtifactFormat[]).map((fmt) => {
                 const meta = FORMAT_META[fmt];
                 const isActive = activeArtifact?.format === fmt;
                 const loading = loadingFormat === fmt;
@@ -227,7 +254,7 @@ function ConceptPanel({
 
           {/* Artifact output */}
           {activeArtifact && (
-            <div className="border-t border-line pt-6">
+            <div ref={artifactRef} className="border-t border-line pt-6">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-xs font-semibold uppercase tracking-widest text-dim">
                   {FORMAT_META[activeArtifact.format].label}
@@ -244,23 +271,13 @@ function ConceptPanel({
               {activeArtifact.format === "flashcards" && (
                 <Flashcards
                   payload={activeArtifact.payload as any}
-                  onComplete={async () => {
-                    if (userId) {
-                      await apiClient.updateMastery({ concept_id: concept.id, source: "flashcard" });
-                      onMasteryUpdate();
-                    }
-                  }}
+                  onComplete={() => markMastery("flashcard")}
                 />
               )}
               {activeArtifact.format === "quiz" && (
                 <Quiz
                   payload={activeArtifact.payload as any}
-                  onAnswer={async (correct) => {
-                    if (userId) {
-                      await apiClient.updateMastery({ concept_id: concept.id, source: correct ? "quiz_pass" : "quiz_fail" });
-                      onMasteryUpdate();
-                    }
-                  }}
+                  onAnswer={(correct) => markMastery(correct ? "quiz_pass" : "quiz_fail")}
                 />
               )}
               {activeArtifact.format === "diagram" && <Diagram payload={activeArtifact.payload as any} />}
