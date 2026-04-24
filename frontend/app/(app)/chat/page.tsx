@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useAuth } from "@/hooks/useAuth";
 
 interface Message {
@@ -130,7 +132,27 @@ export default function ChatPage() {
                       : "bg-surface border border-line text-ink rounded-2xl rounded-bl-sm",
                   ].join(" ")}
                 >
-                  {msg.content}
+                  {msg.role === "assistant" ? (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                        ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-0.5 text-sm">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-0.5 text-sm">{children}</ol>,
+                        strong: ({ children }) => <strong className="font-semibold text-ink">{children}</strong>,
+                        code: ({ children }) => <code className="px-1 py-0.5 rounded bg-ghost border border-line font-mono text-xs">{children}</code>,
+                        pre: ({ children }) => <pre className="bg-ghost border border-line rounded-lg p-3 overflow-x-auto text-xs font-mono mb-2">{children}</pre>,
+                        h1: ({ children }) => <h1 className="text-base font-bold mb-1">{children}</h1>,
+                        h2: ({ children }) => <h2 className="text-sm font-bold mb-1">{children}</h2>,
+                        h3: ({ children }) => <h3 className="text-sm font-semibold mb-1">{children}</h3>,
+                        blockquote: ({ children }) => <blockquote className="border-l-2 border-primary/40 pl-3 text-dim italic">{children}</blockquote>,
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  ) : (
+                    msg.content
+                  )}
                 </div>
               </div>
             ))}

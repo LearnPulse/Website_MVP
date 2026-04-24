@@ -1,1 +1,160 @@
-{"directed": true, "multigraph": false, "graph": {}, "nodes": [], "links": []}
+{
+  "directed": true,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "name": "Computer Systems",
+      "description": "A computer system consists of hardware and software components that work together to support user applications.",
+      "chunk_ids": [
+        "doc_e54ef4b051054a9591d841883900c161_0",
+        "doc_e54ef4b051054a9591d841883900c161_1"
+      ],
+      "source_id": "source_d2978f4aa9c2453a9cc8ccecd0bcd129",
+      "user_id": "06b78192-001f-4cbd-9249-adadbea1c617",
+      "id": "computer_systems_id"
+    },
+    {
+      "name": "Computer Architecture",
+      "description": "The logical structure and behavior of a computer's physical components.",
+      "chunk_ids": [
+        "doc_e54ef4b051054a9591d841883900c161_1",
+        "doc_e54ef4b051054a9591d841883900c161_2"
+      ],
+      "source_id": "source_d2978f4aa9c2453a9cc8ccecd0bcd129",
+      "user_id": "06b78192-001f-4cbd-9249-adadbea1c617",
+      "id": "computer_architecture_id"
+    },
+    {
+      "name": "Operating Systems",
+      "description": "Software that manages computer hardware resources and provides a platform for running applications.",
+      "chunk_ids": [
+        "doc_e54ef4b051054a9591d841883900c161_10",
+        "doc_e54ef4b051054a9591d841883900c161_23"
+      ],
+      "source_id": "source_d2978f4aa9c2453a9cc8ccecd0bcd129",
+      "user_id": "06b78192-001f-4cbd-9249-adadbea1c617",
+      "id": "operating_systems_id"
+    },
+    {
+      "name": "Computer Networking",
+      "description": "The study of how computers communicate with each other over a network.",
+      "chunk_ids": [
+        "doc_e54ef4b051054a9591d841883900c161_24",
+        "doc_e54ef4b051054a9591d841883900c161_47"
+      ],
+      "source_id": "source_d2978f4aa9c2453a9cc8ccecd0bcd129",
+      "user_id": "06b78192-001f-4cbd-9249-adadbea1c617",
+      "id": "computer_networking_id"
+    },
+    {
+      "name": "Von Neumann Architecture",
+      "description": "A design model for computer architecture that consists of a central processing unit, memory, and input/output devices.",
+      "chunk_ids": [
+        "doc_e54ef4b051054a9591d841883900c161_7"
+      ],
+      "source_id": "source_d2978f4aa9c2453a9cc8ccecd0bcd129",
+      "user_id": "06b78192-001f-4cbd-9249-adadbea1c617",
+      "id": "von_neumann_architecture_id"
+    },
+    {
+      "name": "Interrupt-Driven Execution",
+      "description": "A technique where a computer's processor executes instructions and switches between tasks based on interrupts.",
+      "chunk_ids": [
+        "doc_e54ef4b051054a9591d841883900c161_9"
+      ],
+      "source_id": "source_d2978f4aa9c2453a9cc8ccecd0bcd129",
+      "user_id": "06b78192-001f-4cbd-9249-adadbea1c617",
+      "id": "interrupt_driven_execution_id"
+    },
+    {
+      "name": "Processes",
+      "description": "A program in execution, including its memory, registers, and program counter.",
+      "chunk_ids": [
+        "doc_e54ef4b051054a9591d841883900c161_26",
+        "doc_e54ef4b051054a9591d841883900c161_13"
+      ],
+      "source_id": "source_d2978f4aa9c2453a9cc8ccecd0bcd129",
+      "user_id": "06b78192-001f-4cbd-9249-adadbea1c617",
+      "id": "processes_id"
+    },
+    {
+      "name": "Threads",
+      "description": "A sequence of instructions that can be executed concurrently with other threads within the same process.",
+      "chunk_ids": [
+        "doc_e54ef4b051054a9591d841883900c161_42",
+        "doc_e54ef4b051054a9591d841883900c161_22"
+      ],
+      "source_id": "source_d2978f4aa9c2453a9cc8ccecd0bcd129",
+      "user_id": "06b78192-001f-4cbd-9249-adadbea1c617",
+      "id": "threads_id"
+    },
+    {
+      "name": "Virtualization",
+      "description": "A technique that allows multiple operating systems to run on a single physical machine.",
+      "chunk_ids": [
+        "doc_e54ef4b051054a9591d841883900c161_41"
+      ],
+      "source_id": "source_d2978f4aa9c2453a9cc8ccecd0bcd129",
+      "user_id": "06b78192-001f-4cbd-9249-adadbea1c617",
+      "id": "virtualization_id"
+    },
+    {
+      "name": "Packet Switching",
+      "description": "A technique used in computer networking where data is broken into small packets and transmitted over a network.",
+      "chunk_ids": [
+        "doc_e54ef4b051054a9591d841883900c161_47"
+      ],
+      "source_id": "source_d2978f4aa9c2453a9cc8ccecd0bcd129",
+      "user_id": "06b78192-001f-4cbd-9249-adadbea1c617",
+      "id": "packet_switching_id"
+    }
+  ],
+  "edges": [
+    {
+      "type": "part_of",
+      "source": "computer_systems_id",
+      "target": "operating_systems_id"
+    },
+    {
+      "type": "part_of",
+      "source": "computer_architecture_id",
+      "target": "von_neumann_architecture_id"
+    },
+    {
+      "type": "prerequisite",
+      "source": "operating_systems_id",
+      "target": "processes_id"
+    },
+    {
+      "type": "part_of",
+      "source": "computer_networking_id",
+      "target": "packet_switching_id"
+    },
+    {
+      "type": "prerequisite",
+      "source": "von_neumann_architecture_id",
+      "target": "interrupt_driven_execution_id"
+    },
+    {
+      "type": "prerequisite",
+      "source": "interrupt_driven_execution_id",
+      "target": "processes_id"
+    },
+    {
+      "type": "prerequisite",
+      "source": "processes_id",
+      "target": "threads_id"
+    },
+    {
+      "type": "example_of",
+      "source": "virtualization_id",
+      "target": "computer_systems_id"
+    },
+    {
+      "type": "related",
+      "source": "packet_switching_id",
+      "target": "virtualization_id"
+    }
+  ]
+}

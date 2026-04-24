@@ -49,6 +49,7 @@ def add_concept(
     description: str,
     chunk_ids: list[str],
     source_id: str,
+    user_id: str = "",
 ) -> None:
     """Add or update a concept node."""
     G.add_node(
@@ -57,6 +58,7 @@ def add_concept(
         description=description,
         chunk_ids=chunk_ids,
         source_id=source_id,
+        user_id=user_id,
     )
 
 
@@ -128,6 +130,24 @@ def get_neighborhood(G: nx.DiGraph, concept_id: str, depth: int = 1) -> dict[str
             {cid for _, attrs in subgraph.nodes(data=True) for cid in attrs.get("chunk_ids", [])}
         ),
     }
+
+
+def get_user_subgraph(G: nx.DiGraph, user_id: str) -> nx.DiGraph:
+    """
+    Return a subgraph scoped to this user's concepts.
+
+    Includes:
+    - Nodes explicitly tagged with this user_id (new uploads)
+    - Nodes with no user_id (legacy uploads before per-user tagging was added)
+
+    Once a user re-uploads their documents the legacy nodes will be replaced
+    by properly tagged ones and the overlap disappears naturally.
+    """
+    user_nodes = {
+        nid for nid, attrs in G.nodes(data=True)
+        if attrs.get("user_id", "") in (user_id, "")
+    }
+    return G.subgraph(user_nodes).copy()
 
 
 def search_concepts(G: nx.DiGraph, query: str, top_k: int = 5) -> list[dict[str, Any]]:

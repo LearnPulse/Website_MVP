@@ -26,7 +26,7 @@ const NAV = [
     ),
   },
   {
-    href: "/graph", label: "Graph",
+    href: "/graph", label: "Explore",
     icon: (
       <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
         <circle cx="8.5" cy="8.5" r="2" fill="currentColor"/>

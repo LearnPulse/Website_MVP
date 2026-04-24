@@ -1,7 +1,5 @@
-import json
 import logging
-import google.generativeai as genai
-from app.core.config import settings
+from app.services.llm_service import groq_json
 
 logger = logging.getLogger(__name__)
 
@@ -27,22 +25,12 @@ Aim for 6–12 entries. Focus on what a student would need to remember at a glan
 
 
 def generate_cheatsheet(concept: dict, context: str) -> dict:
-    genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel(settings.gemini_chat_model)
     prompt = PROMPT.format(
         concept_name=concept.get("name", ""),
         concept_description=concept.get("description", ""),
         context=context[:3000],
     )
-    try:
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                response_mime_type="application/json", temperature=0.3
-            ),
-        )
-        data = json.loads(response.text)
-        return {"type": "cheatsheet", "entries": data.get("entries", [])}
-    except Exception as exc:
-        logger.warning("Cheatsheet generation failed: %s", exc)
-        return {"type": "cheatsheet", "entries": []}
+    data = groq_json(prompt, temperature=0.3)
+    if not data:
+        logger.warning("Cheatsheet generation returned empty for concept %s", concept.get("name"))
+    return {"type": "cheatsheet", "entries": data.get("entries", [])}

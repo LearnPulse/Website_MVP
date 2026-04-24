@@ -14,6 +14,7 @@ export interface GoogleAuthResponse {
   user_id: string;
   email: string;
   display_name: string | null;
+  is_new_user: boolean;
 }
 
 // ── Knowledge Graph ───────────────────────────────────────────────────────
@@ -60,6 +61,15 @@ export interface ProgressResponse {
 
 export interface UserGoalIn {
   goal_text: string;
+}
+
+export interface GoalSummary {
+  id: string;
+  goal_text: string;
+  source_ids: string[];
+  created_at: string;
+  total_count: number;
+  mastered_count: number;
 }
 
 export interface UserPreferencesIn {

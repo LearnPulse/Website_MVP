@@ -18,29 +18,43 @@ interface GoalInputProps {
 }
 
 export default function GoalInput({ value, onChange, onContinue }: GoalInputProps) {
+  const [focused, setFocused] = useState(false);
   const canContinue = value.trim().length >= 6;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-          What do you want to learn?
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-2">
+        <h2 className="text-3xl font-bold text-white tracking-tight leading-tight">
+          What do you want<br />to learn?
         </h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
+        <p className="text-base text-white/50 leading-relaxed">
           Be specific — the more detail, the better your learning path.
         </p>
       </div>
 
-      <textarea
-        className="w-full rounded-lg border-[0.5px] border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 resize-none focus:outline-none focus:border-primary transition-colors"
-        rows={3}
-        placeholder="e.g. I want to understand how attention mechanisms work in transformers"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
+      <div className={[
+        "relative rounded-2xl border transition-all duration-200",
+        focused ? "border-primary shadow-lg shadow-primary/10" : "border-white/10",
+        "bg-white/5",
+      ].join(" ")}>
+        <textarea
+          className="w-full bg-transparent px-5 py-4 text-white placeholder:text-white/25 text-base resize-none focus:outline-none"
+          rows={4}
+          placeholder="e.g. I want to understand how attention mechanisms work in transformers"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+        />
+        {value.length > 0 && (
+          <div className="px-5 pb-3 flex justify-end">
+            <span className="text-xs text-white/20 tabular">{value.length} chars</span>
+          </div>
+        )}
+      </div>
 
-      <div className="flex flex-col gap-2">
-        <span className="text-xs text-slate-400">Quick select</span>
+      <div className="flex flex-col gap-3">
+        <span className="text-xs font-semibold uppercase tracking-widest text-white/30">Quick select</span>
         <div className="flex flex-wrap gap-2">
           {SUGGESTIONS.map((s) => (
             <button
@@ -48,10 +62,10 @@ export default function GoalInput({ value, onChange, onContinue }: GoalInputProp
               key={s}
               onClick={() => onChange(s)}
               className={[
-                "px-3 py-1.5 rounded-full text-xs border-[0.5px] transition-colors",
+                "px-3.5 py-1.5 rounded-full text-sm border transition-all duration-150",
                 value === s
-                  ? "border-primary text-primary bg-primary/5"
-                  : "border-slate-200 dark:border-slate-700 text-slate-500 hover:border-primary hover:text-primary",
+                  ? "border-primary bg-primary/15 text-primary font-medium"
+                  : "border-white/10 text-white/50 hover:border-white/30 hover:text-white/80 bg-white/5",
               ].join(" ")}
             >
               {s}
@@ -64,9 +78,19 @@ export default function GoalInput({ value, onChange, onContinue }: GoalInputProp
         type="button"
         disabled={!canContinue}
         onClick={onContinue}
-        className="self-end px-5 py-2 rounded-lg bg-primary text-white text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+        className={[
+          "w-full h-12 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2",
+          canContinue
+            ? "bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20"
+            : "bg-white/5 text-white/20 cursor-not-allowed",
+        ].join(" ")}
       >
         Continue
+        {canContinue && (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
       </button>
     </div>
   );

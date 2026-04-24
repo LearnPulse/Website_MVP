@@ -122,7 +122,7 @@ def update_mastery(user_id: str, concept_id: str, delta: int, source: str) -> No
 # ── add_concepts ────────────────────────────────────────────────────────────
 
 @tool
-def add_concepts(concepts: list[dict], relationships: list[dict], source_id: str) -> None:
+def add_concepts(concepts: list[dict], relationships: list[dict], source_id: str, user_id: str = "") -> None:
     """
     Called by the Concept Extractor after extraction.
     Writes concept nodes + edges to the knowledge graph JSON file.
@@ -130,8 +130,10 @@ def add_concepts(concepts: list[dict], relationships: list[dict], source_id: str
     concepts: [{ id, name, description, chunk_ids }]
     relationships: [{ from, to, type }]
     source_id: document UUID this extraction came from
+    user_id: owner of these concepts — used to scope the learning path per user
     """
     G = load_kg()
+    resolved_user_id = user_id
     for c in concepts:
         add_concept(
             G,
@@ -140,6 +142,7 @@ def add_concepts(concepts: list[dict], relationships: list[dict], source_id: str
             description=c.get("description", ""),
             chunk_ids=c.get("chunk_ids", []),
             source_id=source_id,
+            user_id=resolved_user_id,
         )
     for r in relationships:
         if r["from"] in G and r["to"] in G:

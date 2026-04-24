@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   ReactFlow,
   Background,
@@ -19,7 +20,7 @@ import "@xyflow/react/dist/style.css";
 import "./graph.css";
 import dagre from "@dagrejs/dagre";
 import { apiClient } from "@/lib/api-client";
-import type { KGNode, KGEdge, EdgeType } from "@/lib/types";
+import type { KGNode, KGEdge, EdgeType, GoalSummary } from "@/lib/types";
 
 // ── Dagre layout ──────────────────────────────────────────────────────────
 
@@ -60,8 +61,6 @@ function masteryLabel(score: number): string {
 }
 
 // ── Custom concept node ───────────────────────────────────────────────────
-// Dynamic colors are applied via CSS custom properties set imperatively
-// through ref.current.style.setProperty() — no JSX style= props needed.
 
 function ConceptNode({ data }: NodeProps) {
   const score = data.mastery_score as number;
@@ -96,9 +95,17 @@ function ConceptNode({ data }: NodeProps) {
 const NODE_TYPES = { concept: ConceptNode };
 
 // ── Node detail tooltip ───────────────────────────────────────────────────
-// Same pattern: CSS vars set via ref, no JSX style= props.
 
-function NodeTooltip({ node, onClose }: { node: KGNode; onClose: () => void }) {
+function NodeTooltip({
+  node,
+  goalId,
+  onClose,
+}: {
+  node: KGNode;
+  goalId: string | null;
+  onClose: () => void;
+}) {
+  const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -128,12 +135,24 @@ function NodeTooltip({ node, onClose }: { node: KGNode; onClose: () => void }) {
       {node.description && (
         <p className="text-xs text-slate-400 leading-relaxed mb-3">{node.description}</p>
       )}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 mb-3">
         <div className="flex-1 h-1.5 rounded-full bg-slate-700 overflow-hidden">
           <div className="tooltip-bar-fill h-full rounded-full transition-all" />
         </div>
         <span className="tooltip-score text-xs font-semibold">{node.mastery_score}%</span>
       </div>
+      {goalId && (
+        <button
+          type="button"
+          onClick={() => router.push(`/paths/current?goal_id=${goalId}`)}
+          className="w-full flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-all"
+        >
+          Go to Learning path
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+            <path d="M2 5.5h7M6.5 3l2 2.5-2 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
@@ -165,10 +184,14 @@ export default function GraphPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<EdgeType | "all">("all");
+  const [goals, setGoals] = useState<GoalSummary[]>([]);
+  const [selectedGoalId, setSelectedGoalId] = useState<string | "all">("all");
 
   const buildGraph = useCallback(
     (kgNodes: KGNode[], kgEdges: KGEdge[], edgeFilter: EdgeType | "all") => {
-      const filtered = edgeFilter === "all" ? kgEdges : kgEdges.filter((e) => e.type === edgeFilter);
+      const nodeIds = new Set(kgNodes.map((n) => n.id));
+      const filtered = (edgeFilter === "all" ? kgEdges : kgEdges.filter((e) => e.type === edgeFilter))
+        .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target));
 
       const rfNodes: Node[] = kgNodes.map((n) => ({
         id: n.id,
@@ -201,40 +224,72 @@ export default function GraphPage() {
   useEffect(() => {
     (async () => {
       setIsLoading(true);
-      const res = await apiClient.getGraph();
-      if (!res.success || !res.data) {
-        setError(res.error ?? "Failed to load graph");
+      const [graphRes, goalsRes] = await Promise.all([
+        apiClient.getGraph(),
+        apiClient.listGoals(),
+      ]);
+      if (!graphRes.success || !graphRes.data) {
+        setError(graphRes.error ?? "Failed to load graph");
         setIsLoading(false);
         return;
       }
-      setRawNodes(res.data.nodes);
-      setRawEdges(res.data.edges);
-      buildGraph(res.data.nodes, res.data.edges, "all");
+      setRawNodes(graphRes.data.nodes);
+      setRawEdges(graphRes.data.edges);
+      if (goalsRes.success && goalsRes.data && goalsRes.data.length > 0) {
+        setGoals(goalsRes.data);
+        setSelectedGoalId(goalsRes.data[0].id);
+      } else {
+        buildGraph(graphRes.data.nodes, graphRes.data.edges, "all");
+      }
       setIsLoading(false);
     })();
   }, [buildGraph]);
 
+  const displayNodes = useMemo(() => {
+    if (selectedGoalId === "all") return rawNodes;
+    const goal = goals.find((g) => g.id === selectedGoalId);
+    if (!goal || !goal.source_ids?.length) return rawNodes;
+    return rawNodes.filter((n) => goal.source_ids.includes(n.source_id ?? ""));
+  }, [rawNodes, goals, selectedGoalId]);
+
   useEffect(() => {
     if (rawNodes.length === 0) return;
-    buildGraph(rawNodes, rawEdges, filter);
-  }, [filter, rawNodes, rawEdges, buildGraph]);
+    buildGraph(displayNodes, rawEdges, filter);
+  }, [filter, displayNodes, rawEdges, buildGraph]);
 
   function onNodeClick(_: React.MouseEvent, node: Node) {
     setSelectedNode(rawNodes.find((n) => n.id === node.id) ?? null);
   }
+
+  const activeGoalId = selectedGoalId === "all" ? null : selectedGoalId;
 
   return (
     <div className="flex flex-col h-screen">
       {/* ── Header ── */}
       <div className="px-8 py-5 border-b border-slate-800 flex-shrink-0 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-lg font-semibold text-slate-100">Knowledge graph</h1>
+          <h1 className="text-lg font-semibold text-slate-100">Concept Map</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            {rawNodes.length} concept{rawNodes.length !== 1 ? "s" : ""} — click a node to explore
+            {displayNodes.length} concept{displayNodes.length !== 1 ? "s" : ""} — click a node to explore
           </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {goals.length > 0 && (
+            <select
+              value={selectedGoalId}
+              onChange={(e) => setSelectedGoalId(e.target.value)}
+              className="h-8 px-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-slate-300 hover:border-slate-600 focus:outline-none focus:border-primary transition-colors max-w-[200px]"
+            >
+              <option value="all">All paths</option>
+              {goals.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.goal_text.length > 38 ? `${g.goal_text.slice(0, 38)}…` : g.goal_text}
+                </option>
+              ))}
+            </select>
+          )}
+
           {FILTERS.map((f) => {
             const active = filter === f.value;
             return (
@@ -283,10 +338,10 @@ export default function GraphPage() {
             <p className="text-sm text-slate-400">{error}</p>
           </div>
         )}
-        {!isLoading && !error && rawNodes.length === 0 && (
+        {!isLoading && !error && displayNodes.length === 0 && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10">
             <p className="text-sm text-slate-400">No concepts yet.</p>
-            <p className="text-xs text-slate-600">Upload documents to build your knowledge graph.</p>
+            <p className="text-xs text-slate-600">Upload documents to build your concept map.</p>
           </div>
         )}
 
@@ -313,7 +368,7 @@ export default function GraphPage() {
         </ReactFlow>
 
         {selectedNode && (
-          <NodeTooltip node={selectedNode} onClose={() => setSelectedNode(null)} />
+          <NodeTooltip node={selectedNode} goalId={activeGoalId} onClose={() => setSelectedNode(null)} />
         )}
       </div>
     </div>

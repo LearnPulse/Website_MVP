@@ -1,6 +1,5 @@
 import logging
-import google.generativeai as genai
-from app.core.config import settings
+from app.services.llm_service import groq_text
 
 logger = logging.getLogger(__name__)
 
@@ -21,22 +20,12 @@ Return only the transcript text, no JSON, no headers.
 
 
 def generate_audio(concept: dict, context: str) -> dict:
-    """
-    Returns a transcript for now (no TTS synthesis in MVP).
-    The frontend renders a play button placeholder + the transcript.
-    """
-    genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel(settings.gemini_chat_model)
+    """Returns a transcript (no TTS synthesis in MVP). Frontend renders a play button + transcript."""
     prompt = PROMPT.format(
         concept_name=concept.get("name", ""),
         context=context[:3000],
     )
-    try:
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(temperature=0.5),
-        )
-        return {"type": "audio", "transcript": response.text.strip()}
-    except Exception as exc:
-        logger.warning("Audio generation failed: %s", exc)
-        return {"type": "audio", "transcript": ""}
+    transcript = groq_text(prompt, temperature=0.5)
+    if not transcript:
+        logger.warning("Audio generation returned empty for concept %s", concept.get("name"))
+    return {"type": "audio", "transcript": transcript}

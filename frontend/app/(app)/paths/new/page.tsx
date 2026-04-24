@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, clearNewUserFlag } from "@/hooks/useAuth";
 import StepIndicator from "@/components/onboarding/StepIndicator";
 import GoalInput from "@/components/onboarding/GoalInput";
 import PreferenceSelector from "@/components/onboarding/PreferenceSelector";
@@ -21,7 +21,7 @@ interface Prefs {
 
 const DEFAULT_PREFS: Prefs = {
   preferred_formats: ["cheatsheet"],
-  session_length: "micro",
+  session_length: "standard",
   detail_level: "concise",
 };
 
@@ -31,6 +31,7 @@ export default function NewPathPage() {
 
   const [step, setStep] = useState<Step>(0);
   const [goal, setGoal] = useState("");
+  const [goalId, setGoalId] = useState<string | null>(null);
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -38,7 +39,8 @@ export default function NewPathPage() {
 
   async function handleGoalContinue() {
     if (!userId) return;
-    await apiClient.saveGoal({ goal_text: goal });
+    const res = await apiClient.saveGoal({ goal_text: goal });
+    if (res.success && res.data) setGoalId(res.data.id);
     setStep(1);
   }
 
@@ -52,52 +54,51 @@ export default function NewPathPage() {
     if (!userId || files.length === 0) return;
     setUploading(true);
     setStep(3);
-    const results = await Promise.all(
-      files.map((f) => apiClient.uploadDocument(f, userId))
-    );
+    const results = await Promise.all(files.map((f) => apiClient.uploadDocument(f, userId)));
     const total = results.reduce((acc, r) => acc + (r.data?.concept_count ?? 0), 0);
     setConceptCount(total);
     setUploading(false);
+    // Link the uploaded source_ids to this goal so concepts are filtered per path
+    if (goalId) {
+      const sourceIds = results.flatMap((r) => r.data?.source_id ? [r.data.source_id] : []);
+      if (sourceIds.length > 0) await apiClient.updateGoalSources(goalId, sourceIds);
+    }
   }
 
   return (
-    <div className="min-h-full flex flex-col">
+    <div className="min-h-full flex flex-col bg-canvas">
+      {/* Header with step indicator */}
       {step < 3 && (
-        <div className="px-5 pt-8 pb-4 max-w-lg mx-auto w-full">
-          <StepIndicator
-            currentStep={step as 0 | 1 | 2}
-            completedSteps={Array.from({ length: step }, (_, i) => i)}
-          />
+        <div className="px-6 pt-10 pb-6">
+          <div className="max-w-md mx-auto flex flex-col gap-6">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-white/20 uppercase tracking-widest">New learning path</span>
+              <span className="text-xs text-white/20">{step + 1} / 3</span>
+            </div>
+            <StepIndicator
+              currentStep={step as 0 | 1 | 2}
+              completedSteps={Array.from({ length: step }, (_, i) => i)}
+            />
+          </div>
         </div>
       )}
-      <div className="flex-1 flex items-center justify-center px-5 py-8">
-        <div className="w-full max-w-lg">
+
+      {/* Step content — key forces remount + step-enter animation on each step */}
+      <div className="flex-1 flex items-center justify-center px-6 py-8">
+        <div key={step} className="step-enter w-full max-w-md">
           {step === 0 && (
-            <GoalInput
-              value={goal}
-              onChange={setGoal}
-              onContinue={handleGoalContinue}
-            />
+            <GoalInput value={goal} onChange={setGoal} onContinue={handleGoalContinue} />
           )}
           {step === 1 && (
-            <PreferenceSelector
-              value={prefs}
-              onChange={setPrefs}
-              onContinue={handlePrefsContinue}
-            />
+            <PreferenceSelector value={prefs} onChange={setPrefs} onContinue={handlePrefsContinue} />
           )}
           {step === 2 && (
-            <UploadZone
-              files={files}
-              onFilesChange={setFiles}
-              onSubmit={handleUploadSubmit}
-              isLoading={uploading}
-            />
+            <UploadZone files={files} onFilesChange={setFiles} onSubmit={handleUploadSubmit} isLoading={uploading} />
           )}
           {step === 3 && (
             <ProcessingSteps
               conceptCount={conceptCount}
-              onDone={() => router.push("/paths/current")}
+              onDone={() => { clearNewUserFlag(); router.push(goalId ? `/paths/current?goal_id=${goalId}` : "/dashboard"); }}
             />
           )}
         </div>

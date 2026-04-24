@@ -1,7 +1,5 @@
-import json
 import logging
-import google.generativeai as genai
-from app.core.config import settings
+from app.services.llm_service import groq_json
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +36,6 @@ SVG_TEMPLATE = """\
 
 
 def _build_svg(nodes: list[dict], edges: list[dict]) -> str:
-    """Simple grid layout SVG — no external lib required."""
     cols = 3
     node_w, node_h, gap_x, gap_y = 140, 40, 40, 60
     positions: dict[str, tuple[int, int]] = {}
@@ -72,22 +69,13 @@ def _build_svg(nodes: list[dict], edges: list[dict]) -> str:
 
 
 def generate_diagram(concept: dict, context: str) -> dict:
-    genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel(settings.gemini_chat_model)
     prompt = PROMPT.format(
         concept_name=concept.get("name", ""),
         context=context[:2000],
     )
-    try:
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                response_mime_type="application/json", temperature=0.2
-            ),
-        )
-        data = json.loads(response.text)
-        svg = _build_svg(data.get("nodes", []), data.get("edges", []))
-        return {"type": "diagram", "svg": svg}
-    except Exception as exc:
-        logger.warning("Diagram generation failed: %s", exc)
+    data = groq_json(prompt, temperature=0.2)
+    if not data:
+        logger.warning("Diagram generation returned empty for concept %s", concept.get("name"))
         return {"type": "diagram", "svg": ""}
+    svg = _build_svg(data.get("nodes", []), data.get("edges", []))
+    return {"type": "diagram", "svg": svg}

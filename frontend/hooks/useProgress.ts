@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { apiClient } from "@/lib/api-client";
 import type { ProgressResponse } from "@/lib/types";
 
-export function useProgress(userId: string | null) {
+export function useProgress(userId: string | null, goalId?: string) {
   const [data, setData] = useState<ProgressResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -13,14 +13,14 @@ export function useProgress(userId: string | null) {
     if (!userId) return;
     setIsLoading(true);
     setError(null);
-    const res = await apiClient.getProgress(userId);
+    const res = await apiClient.getProgress(userId, goalId);
     if (res.success && res.data) {
       setData(res.data);
     } else {
       setError(res.error ?? "Failed to load progress");
     }
     setIsLoading(false);
-  }, [userId]);
+  }, [userId, goalId]);
 
   useEffect(() => { fetch(); }, [fetch]);
 

@@ -1,4 +1,5 @@
 from typing import List
+import concurrent.futures
 import google.generativeai as genai
 from app.core.config import settings
 from sentence_transformers import SentenceTransformer
@@ -23,15 +24,18 @@ def embed_texts(texts: List[str]) -> List[List[float]]:
         raise ValueError("GEMINI_API_KEY is not set")
 
     genai.configure(api_key=settings.gemini_api_key)
-    embeddings: List[List[float]] = []
-    for text in texts:
+
+    def _embed_one(text: str) -> List[float]:
         result = genai.embed_content(
             model=settings.gemini_embed_model,
             content=text,
-            task_type="retrieval_document"
+            task_type="retrieval_document",
         )
-        embeddings.append(result["embedding"])
-    return embeddings
+        return result["embedding"]
+
+    # Parallelize embedding calls — reduces N×latency to ~latency of one call
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        return list(pool.map(_embed_one, texts))
 
 
 def embed_query(text: str) -> List[float]:

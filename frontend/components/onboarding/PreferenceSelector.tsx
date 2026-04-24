@@ -2,23 +2,23 @@
 
 import type { ArtifactFormat } from "@/lib/types";
 
-const FORMATS: { value: ArtifactFormat; label: string }[] = [
-  { value: "cheatsheet", label: "Cheatsheet" },
-  { value: "flashcards", label: "Flashcards" },
-  { value: "quiz", label: "Quiz" },
-  { value: "diagram", label: "Diagram" },
-  { value: "audio", label: "Audio" },
+const FORMATS: { value: ArtifactFormat; label: string; icon: string }[] = [
+  { value: "cheatsheet", label: "Cheatsheet", icon: "📋" },
+  { value: "flashcards", label: "Flashcards", icon: "🃏" },
+  { value: "quiz",       label: "Quiz",       icon: "✏️" },
+  { value: "diagram",    label: "Diagram",    icon: "🗺️" },
+  { value: "audio",      label: "Audio",      icon: "🎧" },
 ];
 
 const SESSION_LENGTHS = [
-  { value: "micro", label: "Micro", sub: "5 min" },
-  { value: "standard", label: "Standard", sub: "20 min" },
-  { value: "deep", label: "Deep", sub: "1 hr+" },
+  { value: "micro",    label: "Micro",    sub: "5 min",  desc: "Quick refreshers" },
+  { value: "standard", label: "Standard", sub: "20 min", desc: "Balanced sessions" },
+  { value: "deep",     label: "Deep",     sub: "1 hr+",  desc: "Full deep dives" },
 ] as const;
 
 const DETAIL_LEVELS = [
-  { value: "concise", label: "Concise" },
-  { value: "detailed", label: "Detailed" },
+  { value: "concise",  label: "Concise",  desc: "Key points only" },
+  { value: "detailed", label: "Detailed", desc: "Full explanations" },
 ] as const;
 
 interface Preferences {
@@ -44,21 +44,21 @@ export default function PreferenceSelector({ value, onChange, onContinue }: Pref
   const canContinue = value.preferred_formats.length > 0;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-          How do you learn best?
+    <div className="flex flex-col gap-7">
+      <div className="flex flex-col gap-2">
+        <h2 className="text-3xl font-bold text-white tracking-tight leading-tight">
+          How do you<br />learn best?
         </h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          Choose the artifact formats you want generated for each concept.
+        <p className="text-base text-white/50">
+          Personalise how LearnPulse delivers content to you.
         </p>
       </div>
 
-      {/* Artifact formats */}
-      <div className="flex flex-col gap-2">
-        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Formats</span>
-        <div className="flex flex-wrap gap-2">
-          {FORMATS.map(({ value: f, label }) => {
+      {/* Formats */}
+      <div className="flex flex-col gap-3">
+        <span className="text-xs font-semibold uppercase tracking-widest text-white/30">Study formats</span>
+        <div className="grid grid-cols-5 gap-2">
+          {FORMATS.map(({ value: f, label, icon }) => {
             const selected = value.preferred_formats.includes(f);
             return (
               <button
@@ -66,12 +66,13 @@ export default function PreferenceSelector({ value, onChange, onContinue }: Pref
                 key={f}
                 onClick={() => toggleFormat(f)}
                 className={[
-                  "px-3 py-1.5 rounded-full text-sm border-[0.5px] transition-colors",
+                  "flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border text-xs font-medium transition-all duration-150",
                   selected
-                    ? "border-primary bg-primary text-white"
-                    : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-primary",
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-white/10 bg-white/5 text-white/40 hover:border-white/20 hover:text-white/70",
                 ].join(" ")}
               >
+                <span className="text-lg leading-none">{icon}</span>
                 {label}
               </button>
             );
@@ -80,45 +81,47 @@ export default function PreferenceSelector({ value, onChange, onContinue }: Pref
       </div>
 
       {/* Session length */}
-      <div className="flex flex-col gap-2">
-        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Session length</span>
+      <div className="flex flex-col gap-3">
+        <span className="text-xs font-semibold uppercase tracking-widest text-white/30">Session length</span>
         <div className="flex gap-2">
-          {SESSION_LENGTHS.map(({ value: v, label, sub }) => (
+          {SESSION_LENGTHS.map(({ value: v, label, sub, desc }) => (
             <button
               type="button"
               key={v}
               onClick={() => onChange({ ...value, session_length: v })}
               className={[
-                "flex-1 py-2 rounded-lg border-[0.5px] text-sm transition-colors",
+                "flex-1 py-3 px-3 rounded-xl border text-left transition-all duration-150",
                 value.session_length === v
-                  ? "border-primary text-primary bg-primary/5"
-                  : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-primary",
+                  ? "border-primary bg-primary/10"
+                  : "border-white/10 bg-white/5 hover:border-white/20",
               ].join(" ")}
             >
-              <div className="font-medium">{label}</div>
-              <div className="text-xs opacity-60">{sub}</div>
+              <div className={`text-sm font-semibold ${value.session_length === v ? "text-primary" : "text-white"}`}>{label}</div>
+              <div className="text-xs text-white/40 mt-0.5">{sub}</div>
+              <div className="text-[10px] text-white/25 mt-1">{desc}</div>
             </button>
           ))}
         </div>
       </div>
 
       {/* Detail level */}
-      <div className="flex flex-col gap-2">
-        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Detail level</span>
+      <div className="flex flex-col gap-3">
+        <span className="text-xs font-semibold uppercase tracking-widest text-white/30">Detail level</span>
         <div className="flex gap-2">
-          {DETAIL_LEVELS.map(({ value: v, label }) => (
+          {DETAIL_LEVELS.map(({ value: v, label, desc }) => (
             <button
               type="button"
               key={v}
               onClick={() => onChange({ ...value, detail_level: v })}
               className={[
-                "flex-1 py-2 rounded-lg border-[0.5px] text-sm transition-colors",
+                "flex-1 py-3 px-4 rounded-xl border text-left transition-all duration-150",
                 value.detail_level === v
-                  ? "border-primary text-primary bg-primary/5"
-                  : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-primary",
+                  ? "border-primary bg-primary/10"
+                  : "border-white/10 bg-white/5 hover:border-white/20",
               ].join(" ")}
             >
-              {label}
+              <div className={`text-sm font-semibold ${value.detail_level === v ? "text-primary" : "text-white"}`}>{label}</div>
+              <div className="text-xs text-white/40 mt-0.5">{desc}</div>
             </button>
           ))}
         </div>
@@ -128,9 +131,19 @@ export default function PreferenceSelector({ value, onChange, onContinue }: Pref
         type="button"
         disabled={!canContinue}
         onClick={onContinue}
-        className="self-end px-5 py-2 rounded-lg bg-primary text-white text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+        className={[
+          "w-full h-12 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2",
+          canContinue
+            ? "bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20"
+            : "bg-white/5 text-white/20 cursor-not-allowed",
+        ].join(" ")}
       >
         Continue
+        {canContinue && (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
       </button>
     </div>
   );

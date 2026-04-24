@@ -8,16 +8,16 @@ The orchestrator:
   1. Calls query_concepts → finds relevant KG nodes + chunk_ids
   2. Calls fetch_chunks   → retrieves raw text
   3. Calls get_user_state → gets mastery + preferences
-  4. Generates with Gemini (mastery-aware prompt)
+  4. Generates with Groq (mastery-aware prompt)
   5. Routes output to the appropriate artifact sub-agent
 """
 
+import json
 import logging
 from typing import Literal
 
-import google.generativeai as genai
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import HumanMessage
+from langchain_groq import ChatGroq
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 
@@ -28,6 +28,7 @@ from app.agent.artifacts.quiz import generate_quiz
 from app.agent.artifacts.diagram import generate_diagram
 from app.agent.artifacts.audio import generate_audio
 from app.core.config import settings
+from app.services.llm_service import groq_text
 from app.tools import query_concepts, fetch_chunks, get_user_state
 from app.knowledge_graph import get_concept, load_kg
 
@@ -74,14 +75,10 @@ Generate thorough, accurate content grounded in the context above.
 
 def reason_node(state: OrchestratorState) -> dict:
     """Invoke the LLM with tool-binding for the ReAct loop."""
-    # convert_system_message_to_human=True merges SystemMessage content into the
-    # first HumanMessage so Gemini never sees a standalone SystemMessage turn,
-    # which would violate its function-call ordering constraint.
-    llm = ChatGoogleGenerativeAI(
-        model=settings.gemini_chat_model,
-        google_api_key=settings.gemini_api_key,
+    llm = ChatGroq(
+        model=settings.groq_model,
+        groq_api_key=settings.groq_api_key,
         temperature=0.3,
-        convert_system_message_to_human=True,
     ).bind_tools(TOOLS)
 
     mastery = state.get("mastery_summary", {})
@@ -94,11 +91,9 @@ def reason_node(state: OrchestratorState) -> dict:
 
     messages = state.get("messages", [])
     if not messages:
-        # First call — seed with system context + user request
-        messages = [
-            SystemMessage(content=system),
-            HumanMessage(content=f"Help me learn: {state['query']}"),
-        ]
+        seed = [HumanMessage(content=f"[Instructions]\n{system}\n\n[Request]\nHelp me learn: {state['query']}")]
+        response = llm.invoke(seed)
+        return {"messages": seed + [response]}
 
     response = llm.invoke(messages)
     return {"messages": [response]}
@@ -113,29 +108,33 @@ def should_continue(state: OrchestratorState) -> Literal["tools", "generate"]:
 
 
 def collect_tool_results(state: OrchestratorState) -> dict:
-    """
-    After ToolNode runs, extract structured data from messages into state fields.
-    """
+    """After ToolNode runs, extract structured data from messages into state fields."""
     updates: dict = {}
+
+    def _parse(raw) -> dict:
+        if isinstance(raw, (dict, list)):
+            return raw if isinstance(raw, dict) else {}
+        if isinstance(raw, str):
+            try:
+                return json.loads(raw)
+            except json.JSONDecodeError:
+                return {}
+        return {}
 
     for msg in reversed(state["messages"]):
         if not hasattr(msg, "name"):
             continue
-        try:
-            content = msg.content if isinstance(msg.content, dict) else {}
-        except Exception:
-            continue
+        content = _parse(msg.content)
 
         if msg.name == "query_concepts" and not state.get("retrieved_concepts"):
             updates["retrieved_concepts"] = content.get("nodes", [])
-            chunk_ids = content.get("chunk_ids", [])
-            updates.setdefault("_pending_chunk_ids", chunk_ids)
+            updates.setdefault("_pending_chunk_ids", content.get("chunk_ids", []))
 
         elif msg.name == "fetch_chunks" and not state.get("chunk_texts"):
             if isinstance(msg.content, list):
                 updates["chunk_texts"] = msg.content
-            elif isinstance(msg.content, dict):
-                updates["chunk_texts"] = msg.content.get("result", [])
+            else:
+                updates["chunk_texts"] = content.get("result", [])
 
         elif msg.name == "get_user_state" and not state.get("mastery_summary"):
             updates["mastery_summary"] = content
@@ -144,7 +143,7 @@ def collect_tool_results(state: OrchestratorState) -> dict:
 
 
 def generate_node(state: OrchestratorState) -> dict:
-    """Assemble context and call Gemini for the final generation."""
+    """Assemble context and call Groq for the final generation."""
     G = load_kg()
     concept = get_concept(G, state["concept_id"]) or {"name": state["query"], "description": ""}
     context = "\n\n".join(state.get("chunk_texts", []))[:4000]
@@ -152,8 +151,6 @@ def generate_node(state: OrchestratorState) -> dict:
         state.get("mastery_summary", {}).get("mastery", {}).get(state["concept_id"], 0)
     )
 
-    genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel(settings.gemini_chat_model)
     prompt = GENERATION_PROMPT.format(
         artifact_type=state["artifact_type"],
         concept_name=concept.get("name", state["query"]),
@@ -161,18 +158,15 @@ def generate_node(state: OrchestratorState) -> dict:
         mastery_score=mastery_score,
         context=context,
     )
-    try:
-        response = model.generate_content(prompt)
-        gemini_output = response.text or ""
-    except Exception as exc:
-        logger.warning("Gemini generation failed: %s", exc)
-        gemini_output = ""
+    output = groq_text(prompt, temperature=0.3)
+    if not output:
+        logger.warning("Groq generation returned empty for concept %s", state["concept_id"])
 
-    return {"gemini_output": gemini_output}
+    return {"gemini_output": output}
 
 
 def artifact_node(state: OrchestratorState) -> dict:
-    """Route Gemini output to the correct artifact formatter."""
+    """Route Groq output to the correct artifact formatter."""
     G = load_kg()
     concept = get_concept(G, state["concept_id"]) or {"name": state["query"], "description": ""}
     context = "\n\n".join(state.get("chunk_texts", []))[:4000]
@@ -251,7 +245,7 @@ async def run_orchestrator(
     }
 
     graph = get_graph()
-    final_state = await graph.ainvoke(initial_state)
+    final_state = await graph.ainvoke(initial_state, config={"recursion_limit": 12})
     return {
         "artifact_type": artifact_type,
         "concept_id": concept_id,

@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { useProgress } from "@/hooks/useProgress";
+import { apiClient } from "@/lib/api-client";
+import type { GoalSummary } from "@/lib/types";
 
 function ProgressBar({ pct }: { pct: number }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -17,11 +18,27 @@ function ProgressBar({ pct }: { pct: number }) {
 
 export default function PathsPage() {
   const { userId } = useAuth();
-  const { data, isLoading, error, refetch } = useProgress(userId);
   const router = useRouter();
+  const [goals, setGoals] = useState<GoalSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const pct = data && data.total_count > 0
-    ? Math.round((data.mastered_count / data.total_count) * 100) : 0;
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    const res = await apiClient.listGoals();
+    if (res.success && res.data) {
+      setGoals(res.data);
+    } else {
+      setError(res.error ?? "Failed to load paths");
+    }
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  // suppress unused warning — userId kept for future per-user API calls
+  void userId;
 
   return (
     <div className="min-h-full px-10 py-12 max-w-[780px]">
@@ -41,9 +58,9 @@ export default function PathsPage() {
       </div>
 
       {isLoading && (
-        <div className="space-y-4 animate-pulse">
+        <div className="space-y-4">
           {[1, 2].map((i) => (
-            <div key={i} className="h-28 bg-surface rounded-2xl border border-line" />
+            <div key={i} className="h-28 bg-surface rounded-2xl border border-line animate-pulse" />
           ))}
         </div>
       )}
@@ -51,45 +68,58 @@ export default function PathsPage() {
       {error && (
         <div className="py-10">
           <p className="text-sm text-dim mb-3">{error}</p>
-          <button type="button" onClick={refetch} className="text-sm text-primary hover:underline">
-            Try again
-          </button>
+          <button type="button" onClick={load} className="text-sm text-primary hover:underline">Try again</button>
         </div>
       )}
 
-      {!isLoading && !error && data && data.total_count > 0 && (
-        <button
-          type="button"
-          onClick={() => router.push("/paths/current")}
-          className="w-full group text-left p-6 bg-surface border border-line rounded-2xl hover:border-dim/40 hover:shadow-card transition-all duration-200"
-        >
-          <div className="flex items-start justify-between gap-4 mb-5">
-            <div className="flex-1 min-w-0">
-              <span className="inline-flex items-center h-6 px-2.5 rounded-full bg-primary/12 text-primary text-xs font-semibold mb-3">
-                Active
-              </span>
-              <p className="text-base font-semibold text-ink leading-snug">{data.goal_text}</p>
-            </div>
-            <svg
-              className="w-5 h-5 text-dim group-hover:text-ink transition-colors flex-shrink-0 mt-1"
-              viewBox="0 0 16 16" fill="none"
-            >
-              <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
+      {!isLoading && !error && goals.length > 0 && (
+        <div className="flex flex-col gap-4">
+          {goals.map((g, i) => {
+            const pct = g.total_count > 0 ? Math.round((g.mastered_count / g.total_count) * 100) : 0;
+            return (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => router.push(`/paths/current?goal_id=${g.id}`)}
+                className="w-full group text-left p-6 bg-surface border border-line rounded-2xl hover:border-dim/40 hover:shadow-card transition-all duration-200"
+              >
+                <div className="flex items-start justify-between gap-4 mb-5">
+                  <div className="flex-1 min-w-0">
+                    {i === 0 && (
+                      <span className="inline-flex items-center h-6 px-2.5 rounded-full bg-primary/12 text-primary text-xs font-semibold mb-3">
+                        Active
+                      </span>
+                    )}
+                    <p className="text-base font-semibold text-ink leading-snug">{g.goal_text}</p>
+                  </div>
+                  <svg
+                    className="w-5 h-5 text-dim group-hover:text-ink transition-colors flex-shrink-0 mt-1"
+                    viewBox="0 0 16 16" fill="none"
+                  >
+                    <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
 
-          <ProgressBar pct={pct} />
-
-          <div className="flex items-center gap-4 mt-3 text-sm text-dim">
-            <span>{data.mastered_count} mastered</span>
-            <span>·</span>
-            <span>{data.total_count - data.mastered_count} remaining</span>
-            <span className="ml-auto tabular font-semibold text-primary">{pct}%</span>
-          </div>
-        </button>
+                {g.total_count > 0 ? (
+                  <>
+                    <ProgressBar pct={pct} />
+                    <div className="flex items-center gap-4 mt-3 text-sm text-dim">
+                      <span>{g.mastered_count} mastered</span>
+                      <span>·</span>
+                      <span>{g.total_count - g.mastered_count} remaining</span>
+                      <span className="ml-auto tabular font-semibold text-primary">{pct}%</span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-dim">No documents uploaded yet.</p>
+                )}
+              </button>
+            );
+          })}
+        </div>
       )}
 
-      {!isLoading && !error && (!data || data.total_count === 0) && (
+      {!isLoading && !error && goals.length === 0 && (
         <div className="py-24 flex flex-col items-start">
           <div className="w-14 h-14 rounded-2xl bg-surface border border-line flex items-center justify-center mb-8">
             <svg width="26" height="26" viewBox="0 0 26 26" fill="none" className="text-dim">

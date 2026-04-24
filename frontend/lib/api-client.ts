@@ -8,6 +8,7 @@ import type {
   MasteryUpdateRequest,
   UserPreferencesIn,
   UserGoalIn,
+  GoalSummary,
   KGResponse,
   ApiResponse,
 } from "@/lib/types";
@@ -64,8 +65,19 @@ class APIClient {
 
   // ── Onboarding ────────────────────────────────────────────────────────────
 
+  async listGoals(): Promise<ApiResponse<GoalSummary[]>> {
+    return this.request<GoalSummary[]>("/goals");
+  }
+
   async saveGoal(goal: UserGoalIn): Promise<ApiResponse<{ id: string }>> {
     return this.request("/goals", { method: "POST", body: JSON.stringify(goal) });
+  }
+
+  async updateGoalSources(goalId: string, sourceIds: string[]): Promise<ApiResponse<void>> {
+    return this.request(`/goals/${goalId}/sources`, {
+      method: "PATCH",
+      body: JSON.stringify({ source_ids: sourceIds }),
+    });
   }
 
   async savePreferences(prefs: UserPreferencesIn): Promise<ApiResponse<void>> {
@@ -99,8 +111,9 @@ class APIClient {
   }
 
   /** Get full learning path with mastery scores for a user. */
-  async getProgress(userId: string): Promise<ApiResponse<ProgressResponse>> {
-    return this.request<ProgressResponse>(`/progress/${userId}`);
+  async getProgress(userId: string, goalId?: string): Promise<ApiResponse<ProgressResponse>> {
+    const qs = goalId ? `?goal_id=${goalId}` : "";
+    return this.request<ProgressResponse>(`/progress/${userId}${qs}`);
   }
 
   /** Fire after artifact interaction: view (+8), flashcard (+15), quiz_pass (+35), quiz_fail (+8). */

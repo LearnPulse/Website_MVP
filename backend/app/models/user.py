@@ -28,6 +28,7 @@ class UserGoal(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     goal_text: Mapped[str] = mapped_column(Text, nullable=False)
     target_concept_id: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    source_ids: Mapped[list] = mapped_column(JSONB, server_default="'[]'::jsonb")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship("User", back_populates="goals")

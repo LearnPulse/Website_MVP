@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useProgress } from "@/hooks/useProgress";
 import { useArtifact } from "@/hooks/useArtifact";
@@ -120,20 +120,31 @@ function ConceptPanel({
   const { requestArtifact } = useArtifact(userId, goalText);
   const [loadingFormat, setLoadingFormat] = useState<ArtifactFormat | null>(null);
   const [activeArtifact, setActiveArtifact] = useState<{ format: ArtifactFormat; payload: ArtifactPayload } | null>(null);
+  const [artifactError, setArtifactError] = useState<string | null>(null);
   const locked = concept.state === "locked";
+
+  // Reset error when concept changes
+  useEffect(() => { setArtifactError(null); setActiveArtifact(null); }, [concept.id]);
 
   async function handleArtifact(fmt: ArtifactFormat) {
     if (loadingFormat || locked) return;
     if (activeArtifact?.format === fmt) { setActiveArtifact(null); return; }
     setLoadingFormat(fmt);
+    setArtifactError(null);
     try {
       const payload = await requestArtifact(concept.id, fmt);
-      if (!payload) return;
+      if (!payload) {
+        setArtifactError("Generation failed — please try again.");
+        return;
+      }
       setActiveArtifact({ format: fmt, payload });
       if (userId) {
         await apiClient.updateMastery({ concept_id: concept.id, source: "view" });
         onMasteryUpdate();
       }
+    } catch (err) {
+      console.error("Artifact request error:", err);
+      setArtifactError("Something went wrong. Please try again.");
     } finally {
       setLoadingFormat(null);
     }
@@ -203,6 +214,17 @@ function ConceptPanel({
             </div>
           </div>
 
+          {/* Error feedback */}
+          {artifactError && (
+            <div className="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl border border-red-400/30 bg-red-400/8 text-sm text-red-400">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0">
+                <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.3"/>
+                <path d="M7 4v3.5M7 10h.01" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+              {artifactError}
+            </div>
+          )}
+
           {/* Artifact output */}
           {activeArtifact && (
             <div className="border-t border-line pt-6">
@@ -255,7 +277,9 @@ function ConceptPanel({
 
 export default function CurrentPathPage() {
   const { userId } = useAuth();
-  const { data, isLoading, error, refetch } = useProgress(userId);
+  const searchParams = useSearchParams();
+  const goalId = searchParams.get("goal_id") ?? undefined;
+  const { data, isLoading, error, refetch } = useProgress(userId, goalId);
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 

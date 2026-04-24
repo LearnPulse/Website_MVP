@@ -8,6 +8,7 @@ Flow:
   4. Run Concept Extractor → Knowledge Graph
 """
 
+import concurrent.futures
 import logging
 import time
 import uuid
@@ -83,12 +84,7 @@ def ingest_document(file_path: str, user_id: str) -> dict[str, Any]:
         return {"status": "empty", "doc_id": doc_id, "source_id": source_id,
                 "chunks": 0, "concept_count": 0}
 
-    # ── Embed + store in ChromaDB ────────────────────────────────────────
-    t_embed = time.perf_counter()
     chunk_texts = [c["text"] for c in chunks]
-    embeddings = embed_texts(chunk_texts)
-    embed_time = time.perf_counter() - t_embed
-
     chunk_ids = [f"{doc_id}_{i}" for i in range(len(chunks))]
     metadatas = [
         {
@@ -101,16 +97,20 @@ def ingest_document(file_path: str, user_id: str) -> dict[str, Any]:
         }
         for i in range(len(chunks))
     ]
+    chunk_dicts = [{"id": chunk_ids[i], "text": chunk_texts[i]} for i in range(len(chunks))]
+
+    # ── Embed + concept-extract in parallel (both are I/O bound) ─────────
+    t_parallel = time.perf_counter()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        embed_future = pool.submit(embed_texts, chunk_texts)
+        extract_future = pool.submit(extract_concepts, chunk_dicts, source_id, user_id)
+        embeddings = embed_future.result()
+        extraction = extract_future.result()
+    embed_time = extract_time = time.perf_counter() - t_parallel
 
     store = get_chroma_store()
     store.add(ids=chunk_ids, embeddings=embeddings, documents=chunk_texts, metadatas=metadatas)
-    logger.info("Embedded %d chunks in %.2fs", len(chunks), embed_time)
-
-    # ── Extract concepts → Knowledge Graph ───────────────────────────────
-    t_extract = time.perf_counter()
-    chunk_dicts = [{"id": chunk_ids[i], "text": chunk_texts[i]} for i in range(len(chunks))]
-    extraction = extract_concepts(chunk_dicts, source_id=source_id)
-    extract_time = time.perf_counter() - t_extract
+    logger.info("Embedded %d chunks + extracted concepts in %.2fs", len(chunks), embed_time)
 
     total_time = time.perf_counter() - t0
     logger.info(

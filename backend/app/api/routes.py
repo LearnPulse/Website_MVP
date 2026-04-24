@@ -12,7 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.config import settings
 from app.db.session import get_session
-from app.knowledge_graph import get_concept, get_all_concepts, get_ordered_concepts, load_kg
+from app.services.llm_service import groq_text
+from app.knowledge_graph import get_concept, get_all_concepts, get_ordered_concepts, get_user_subgraph, load_kg
 from app.models.user import User, UserConcept, UserGoal, UserPreferences
 from app.agent.orchestrator import run_orchestrator
 from app.rag.ingest import ingest_document
@@ -29,10 +30,9 @@ async def get_graph(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    """Return the full knowledge graph with per-concept mastery scores for visualization."""
-    G = load_kg()
+    """Return this user's knowledge graph with per-concept mastery scores for visualization."""
+    G = get_user_subgraph(load_kg(), str(current_user.id))
 
-    # Load mastery
     result = await session.execute(
         select(UserConcept).where(UserConcept.user_id == current_user.id)
     )
@@ -70,7 +70,8 @@ async def ingest(
     dest = upload_dir / file.filename
     dest.write_bytes(await file.read())
 
-    result = ingest_document(str(dest), user_id=str(current_user.id))
+    # ingest_document is CPU/IO-bound sync — run in thread pool to avoid blocking the event loop
+    result = await asyncio.to_thread(ingest_document, str(dest), str(current_user.id))
     return result
 
 
@@ -105,6 +106,7 @@ async def ask(
 @router.get("/progress/{user_id}")
 async def get_progress(
     user_id: str,
+    goal_id: str | None = None,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
@@ -124,20 +126,37 @@ async def get_progress(
     prefs = prefs_result.scalar_one_or_none()
     preferred_formats = prefs.preferred_formats if prefs else ["cheatsheet"]
 
-    # Load goal
-    goal_result = await session.execute(
-        select(UserGoal)
-        .where(UserGoal.user_id == current_user.id)
-        .order_by(UserGoal.created_at.desc())
-        .limit(1)
-    )
-    latest_goal = goal_result.scalar_one_or_none()
-    goal_text = latest_goal.goal_text if latest_goal else ""
+    # Load goal — specific goal_id or latest
+    if goal_id:
+        goal_result = await session.execute(
+            select(UserGoal).where(UserGoal.id == goal_id, UserGoal.user_id == current_user.id)
+        )
+        active_goal = goal_result.scalar_one_or_none()
+    else:
+        goal_result = await session.execute(
+            select(UserGoal)
+            .where(UserGoal.user_id == current_user.id)
+            .order_by(UserGoal.created_at.desc())
+            .limit(1)
+        )
+        active_goal = goal_result.scalar_one_or_none()
 
-    # Build ordered concept list from KG
-    G = load_kg()
+    goal_text = active_goal.goal_text if active_goal else ""
+    source_ids = set(active_goal.source_ids or []) if active_goal else set()
+
+    # Build ordered concept list — scoped to this user only, then optionally
+    # narrowed to a specific goal's source_ids.
+    G = get_user_subgraph(load_kg(), str(current_user.id))
     ordered_ids = get_ordered_concepts(G)
     all_nodes = {c["id"]: c for c in get_all_concepts(G)}
+
+    # If the goal has source_ids, narrow further to those uploads
+    if source_ids:
+        all_nodes = {
+            cid: node for cid, node in all_nodes.items()
+            if node.get("source_id", "") in source_ids
+        }
+        ordered_ids = [cid for cid in ordered_ids if cid in all_nodes]
 
     concepts = []
     for cid in ordered_ids:
@@ -146,8 +165,8 @@ async def get_progress(
         node = all_nodes[cid]
         mastery = mastery_rows.get(cid, 0)
 
-        # Determine state — only "prerequisite" typed edges gate unlocking.
-        # "related", "part_of", "example_of" edges are structural and must not lock a concept.
+        # Determine state — only "prerequisite" edges gate unlocking.
+        # "related", "part_of", "example_of" are structural and must not lock a concept.
         prereqs = [
             p for p in G.predecessors(cid)
             if G.edges[p, cid].get("type") == "prerequisite"
@@ -228,12 +247,62 @@ class UserGoalIn(BaseModel):
     target_concept_id: str | None = None
 
 
+@router.get("/goals")
+async def list_goals(
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Return all learning paths (goals) for the current user, newest first."""
+    result = await session.execute(
+        select(UserGoal)
+        .where(UserGoal.user_id == current_user.id)
+        .order_by(UserGoal.created_at.desc())
+    )
+    goals = result.scalars().all()
+
+    # Use user-scoped graph so counts are accurate per-user
+    G = get_user_subgraph(load_kg(), str(current_user.id))
+    all_nodes = {c["id"]: c for c in get_all_concepts(G)}
+    mastery_result = await session.execute(
+        select(UserConcept).where(UserConcept.user_id == current_user.id)
+    )
+    mastery_rows = {str(r.concept_id): r.mastery_score for r in mastery_result.scalars().all()}
+
+    out = []
+    for g in goals:
+        source_ids = set(g.source_ids or [])
+        if source_ids:
+            concepts = [n for n in all_nodes.values() if n.get("source_id", "") in source_ids]
+        else:
+            concepts = list(all_nodes.values())
+        total = len(concepts)
+        mastered = sum(1 for c in concepts if mastery_rows.get(c["id"], 0) >= 70)
+        out.append({
+            "id": str(g.id),
+            "goal_text": g.goal_text,
+            "source_ids": g.source_ids or [],
+            "created_at": g.created_at.isoformat(),
+            "total_count": total,
+            "mastered_count": mastered,
+        })
+    return out
+
+
 @router.post("/goals")
 async def save_goal(
     payload: UserGoalIn,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
+    existing_result = await session.execute(
+        select(UserGoal)
+        .where(UserGoal.user_id == current_user.id, UserGoal.goal_text == payload.goal_text)
+        .limit(1)
+    )
+    existing = existing_result.scalar_one_or_none()
+    if existing:
+        return {"id": str(existing.id), "existing": True}
+
     goal = UserGoal(
         user_id=current_user.id,
         goal_text=payload.goal_text,
@@ -243,6 +312,30 @@ async def save_goal(
     await session.commit()
     await session.refresh(goal)
     return {"id": str(goal.id)}
+
+
+class GoalSourcesIn(BaseModel):
+    source_ids: list[str]
+
+
+@router.patch("/goals/{goal_id}/sources")
+async def update_goal_sources(
+    goal_id: str,
+    payload: GoalSourcesIn,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Link uploaded source_ids to a goal so its concepts can be filtered."""
+    result = await session.execute(
+        select(UserGoal).where(UserGoal.id == goal_id, UserGoal.user_id == current_user.id)
+    )
+    goal = result.scalar_one_or_none()
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    existing = set(goal.source_ids or [])
+    goal.source_ids = list(existing | set(payload.source_ids))
+    await session.commit()
+    return {"status": "ok", "source_ids": goal.source_ids}
 
 
 class UserPreferencesIn(BaseModel):
@@ -277,3 +370,42 @@ async def save_preferences(
     await session.execute(stmt)
     await session.commit()
     return {"status": "ok"}
+
+
+# ── Chat ──────────────────────────────────────────────────────────────────
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    message: str
+    history: list[ChatMessage] = []
+
+
+@router.post("/chat")
+async def chat(
+    payload: ChatRequest,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    # Load user goal for context
+    goal_result = await session.execute(
+        select(UserGoal)
+        .where(UserGoal.user_id == current_user.id)
+        .order_by(UserGoal.created_at.desc())
+        .limit(1)
+    )
+    latest_goal = goal_result.scalar_one_or_none()
+    goal_text = latest_goal.goal_text if latest_goal else ""
+
+    system = f"You are a helpful learning assistant for LearnPulse. Student's current learning goal: {goal_text or 'Not set yet.'}. Respond concisely and helpfully. When relevant, suggest what to study next based on their goal."
+    history = [{"role": "system", "content": system}]
+    for msg in payload.history[-6:]:
+        history.append({"role": msg.role, "content": msg.content})
+
+    reply = groq_text(payload.message, temperature=0.5, history=history)
+    if not reply:
+        reply = "Something went wrong. Please try again in a moment."
+
+    return {"reply": reply}

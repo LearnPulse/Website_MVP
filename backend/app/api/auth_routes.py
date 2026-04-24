@@ -20,6 +20,7 @@ class AuthResponse(BaseModel):
     user_id: str
     email: str
     display_name: str | None
+    is_new_user: bool = False
 
 
 @router.post("/google", response_model=AuthResponse)
@@ -41,7 +42,8 @@ async def google_auth(payload: GoogleAuthRequest, session: AsyncSession = Depend
     result = await session.execute(select(User).where(User.google_sub == google_sub))
     user = result.scalar_one_or_none()
 
-    if user is None:
+    is_new_user = user is None
+    if is_new_user:
         user = User(email=email, google_sub=google_sub, display_name=display_name)
         session.add(user)
         await session.flush()  # get user.id before creating preferences
@@ -58,4 +60,5 @@ async def google_auth(payload: GoogleAuthRequest, session: AsyncSession = Depend
         user_id=str(user.id),
         email=user.email,
         display_name=user.display_name,
+        is_new_user=is_new_user,
     )

@@ -2,17 +2,14 @@
 Concept Extractor sub-agent (LangGraph node).
 
 Called during document ingest after chunks are embedded.
-Sends chunks to Gemini with a structured extraction prompt and
+Sends chunks to Groq with a structured extraction prompt and
 writes the resulting concept nodes + edges to the knowledge graph.
 """
 
-import json
 import uuid
 import logging
 
-import google.generativeai as genai
-
-from app.core.config import settings
+from app.services.llm_service import groq_json
 from app.tools.user_state import add_concepts
 
 logger = logging.getLogger(__name__)
@@ -60,7 +57,7 @@ Chunks:
 """
 
 
-def extract_concepts(chunks: list[dict], source_id: str) -> dict:
+def extract_concepts(chunks: list[dict], source_id: str, user_id: str = "") -> dict:
     """
     Run concept extraction on a list of chunk dicts: [{id, text}, ...]
     Writes extracted concepts + edges to the knowledge graph.
@@ -69,43 +66,28 @@ def extract_concepts(chunks: list[dict], source_id: str) -> dict:
     if not chunks:
         return {"concept_count": 0, "concepts": [], "relationships": []}
 
-    genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel(settings.gemini_chat_model)
-
-    # Format chunk list for the prompt
     chunks_text = "\n\n".join(
-        f"[chunk_id: {c['id']}]\n{c['text']}" for c in chunks[:30]  # cap at 30 chunks
+        f"[chunk_id: {c['id']}]\n{c['text']}" for c in chunks[:30]
     )
-
     prompt = EXTRACTION_PROMPT.format(chunks=chunks_text)
 
-    try:
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                response_mime_type="application/json",
-                temperature=0.2,
-            ),
-        )
-        raw = response.text.strip()
-        data = json.loads(raw)
-    except Exception as exc:
-        logger.warning("Concept extraction failed: %s", exc)
+    data = groq_json(prompt, temperature=0.2)
+    if not data:
+        logger.warning("Concept extraction returned empty for source %s", source_id)
         return {"concept_count": 0, "concepts": [], "relationships": []}
 
     concepts = data.get("concepts", [])
     relationships = data.get("relationships", [])
 
-    # Assign UUIDs to any concept missing a valid id
     for c in concepts:
         if not c.get("id") or len(c["id"]) < 4:
             c["id"] = str(uuid.uuid4())
 
-    # Write to knowledge graph via the add_concepts tool
     add_concepts.invoke({
         "concepts": concepts,
         "relationships": relationships,
         "source_id": source_id,
+        "user_id": user_id,
     })
 
     logger.info("Extracted %d concepts from source %s", len(concepts), source_id)
