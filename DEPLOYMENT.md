@@ -8,6 +8,7 @@
 | Auth | NextAuth + Google OAuth | Free |
 | LLM + Embeddings | Gemini 1.5 Flash | 15 RPM / 1M tokens/day |
 | Vector store | ChromaDB (embedded in container) | Free |
+| Text-to-Speech | Google Cloud Text-to-Speech | Pay-as-you-go (low cost for MVP) |
 
 ---
 
@@ -25,7 +26,7 @@
 ```bash
 gcloud auth login
 gcloud projects create learnpulse-mvp --set-as-default
-gcloud services enable run.googleapis.com artifactregistry.googleapis.com
+gcloud services enable run.googleapis.com artifactregistry.googleapis.com texttospeech.googleapis.com
 ```
 
 ---
@@ -96,8 +97,15 @@ CORS_ORIGINS=[\"https://<your-app>.vercel.app\"]"
 
 Note the **Service URL** (e.g. `https://learnpulse-backend-xxxx-uc.a.run.app`).
 
+### Text-to-Speech (recommended config)
+
+The backend is set up to use **Application Default Credentials** on Cloud Run (no service-account JSON in your repo).
+
+1. Ensure the API is enabled: `texttospeech.googleapis.com`
+2. Run Cloud Run as a service account that has permission to call Text-to-Speech.
+
 > **Storage note**: ChromaDB and uploaded files live inside the container and are wiped on redeploy.  
-> For persistence, mount a Cloud Storage FUSE volume or switch ChromaDB to a hosted solution later.
+> For persistence, switch to a managed vector store (or move embeddings to Postgres/pgvector) and store uploads / KG in durable storage (Cloud Storage or Postgres).
 
 ---
 
