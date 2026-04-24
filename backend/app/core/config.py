@@ -2,6 +2,7 @@ from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import List
 from pathlib import Path
+import os
 
 
 def _repo_root() -> Path:
@@ -35,7 +36,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field(default="HS256")
     jwt_expire_minutes: int = Field(default=60 * 24 * 7)  # 7 days
     google_client_id: str = Field(default="")  # for server-side ID token validation
-    google_tts_key_path: str = Field(default="backend/secrets/learn-pulse-494314-6784d7d6e9a5.json")
+    # Path to a Google Cloud service account JSON used for Text-to-Speech.
+    # Keep this file out of git (see .gitignore).
+    google_tts_key_path: str = Field(default="backend/secrets/google-tts-service-account.json")
     database_ssl: bool = Field(default=False)  # set True for Neon / Cloud SQL
 
     class Config:
@@ -48,3 +51,12 @@ settings.chroma_dir = _resolve_path(settings.chroma_dir)
 settings.kg_path = _resolve_path(settings.kg_path)
 settings.upload_dir = _resolve_path(settings.upload_dir)
 settings.google_tts_key_path = _resolve_path(settings.google_tts_key_path)
+
+# Back-compat: if the repo default doesn't exist and the user didn't configure
+# GOOGLE_TTS_KEY_PATH, fall back to the old local filename (kept out of git).
+if not os.getenv("GOOGLE_TTS_KEY_PATH"):
+    repo = _repo_root()
+    default_path = repo / "backend/secrets/google-tts-service-account.json"
+    legacy_path = repo / "backend/secrets/learn-pulse-494314-6784d7d6e9a5.json"
+    if not default_path.exists() and legacy_path.exists():
+        settings.google_tts_key_path = str(legacy_path)
