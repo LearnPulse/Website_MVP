@@ -26,7 +26,7 @@
 ```bash
 gcloud auth login
 gcloud projects create learnpulse-mvp --set-as-default
-gcloud services enable run.googleapis.com artifactregistry.googleapis.com texttospeech.googleapis.com
+gcloud services enable run.googleapis.com artifactregistry.googleapis.com cloudbuild.googleapis.com secretmanager.googleapis.com texttospeech.googleapis.com
 ```
 
 ---
@@ -97,12 +97,52 @@ CORS_ORIGINS=[\"https://<your-app>.vercel.app\"]"
 
 Note the **Service URL** (e.g. `https://learnpulse-backend-xxxx-uc.a.run.app`).
 
+### Secrets (recommended: Secret Manager)
+
+For production, store secrets in **Google Secret Manager** instead of plain Cloud Run env vars.
+
+1. Enable Secret Manager:
+```bash
+gcloud services enable secretmanager.googleapis.com
+```
+
+2. Create secrets (examples):
+```bash
+printf '%s' '<neon-url>' | gcloud secrets create DATABASE_URL --data-file=-
+printf '%s' 'true' | gcloud secrets create DATABASE_SSL --data-file=-
+printf '%s' '<gemini-key>' | gcloud secrets create GEMINI_API_KEY --data-file=-
+printf '%s' '<jwt-secret>' | gcloud secrets create JWT_SECRET_KEY --data-file=-
+```
+
+3. Grant Cloud Run service access to secrets:
+```bash
+gcloud secrets add-iam-policy-binding DATABASE_URL \
+  --member="serviceAccount:<cloud-run-sa>@<project-id>.iam.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+```
+
+4. Deploy using secrets:
+```bash
+gcloud run deploy learnpulse-backend \
+  --image us-central1-docker.pkg.dev/learnpulse-mvp/learnpulse/backend:latest \
+  --region us-central1 \
+  --platform managed \
+  --allow-unauthenticated \
+  --set-secrets "\
+DATABASE_URL=DATABASE_URL:latest,\
+DATABASE_SSL=DATABASE_SSL:latest,\
+GEMINI_API_KEY=GEMINI_API_KEY:latest,\
+JWT_SECRET_KEY=JWT_SECRET_KEY:latest" \
+  --set-env-vars "GOOGLE_CLIENT_ID=<id>,CORS_ORIGINS=[\"https://<your-app>.vercel.app\"]"
+```
+
 ### Text-to-Speech (recommended config)
 
 The backend is set up to use **Application Default Credentials** on Cloud Run (no service-account JSON in your repo).
 
 1. Ensure the API is enabled: `texttospeech.googleapis.com`
 2. Run Cloud Run as a service account that has permission to call Text-to-Speech.
+   - Typical role: `roles/texttospeech.user`
 
 > **Storage note**: ChromaDB and uploaded files live inside the container and are wiped on redeploy.  
 > For persistence, switch to a managed vector store (or move embeddings to Postgres/pgvector) and store uploads / KG in durable storage (Cloud Storage or Postgres).
@@ -175,3 +215,37 @@ GOOGLE_CLIENT_SECRET=...
 NEXTAUTH_SECRET=...
 NEXTAUTH_URL=https://your-app.vercel.app
 ```
+
+---
+
+## 9. CI/CD (GitHub Actions + Cloud Run)
+
+Recommended approach: GitHub Actions deploys the backend to Cloud Run on every push to `main`, and Vercel auto-deploys the frontend from GitHub.
+
+Backend CI/CD requires:
+- Artifact Registry repo exists (step 5)
+- Secret Manager secrets exist (section 5)
+- GitHub → GCP auth method
+  - Best: Workload Identity Federation (no long-lived key)
+
+Implementation:
+- Add a workflow at `.github/workflows/backend-cloudrun.yml`
+- Configure repository secrets for project id, region, and the Workload Identity Provider + service account
+
+GitHub repository secrets expected by the workflow:
+- `GCP_PROJECT_ID`
+- `GCP_REGION` (e.g. `us-central1`)
+- `GCP_ARTIFACT_REPO` (e.g. `learnpulse`)
+- `CLOUD_RUN_SERVICE` (e.g. `learnpulse-backend`)
+- `GCP_WORKLOAD_IDENTITY_PROVIDER` (full resource name)
+- `GCP_DEPLOYER_SERVICE_ACCOUNT` (service account email used by GitHub Actions to deploy)
+- `CLOUD_RUN_RUNTIME_SERVICE_ACCOUNT` (optional; runtime service account email)
+- `GOOGLE_CLIENT_ID`
+- `CORS_ORIGIN` (e.g. `your-app.vercel.app`)
+
+Secret Manager secrets expected by the workflow (names matter):
+- `DATABASE_URL`
+- `DATABASE_SSL`
+- `GEMINI_API_KEY`
+- `GROQ_API_KEY`
+- `JWT_SECRET_KEY`
