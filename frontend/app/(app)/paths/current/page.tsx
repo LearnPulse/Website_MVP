@@ -311,7 +311,7 @@ export default function CurrentPathPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
         <p className="text-sm text-dim">{error}</p>
-        <button type="button" onClick={refetch} className="text-sm text-primary hover:underline">Retry</button>
+        <button type="button" onClick={() => void refetch()} className="text-sm text-primary hover:underline">Retry</button>
       </div>
     );
   }
